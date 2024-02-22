@@ -3,15 +3,13 @@
 #include <string>
 #include <unordered_map>
 #include <map>
-using namespace std;
-
 class Core {
 public:
-    unordered_map<std::string, int> registers;
+    std::unordered_map<std::string, int> registers;
     int pc;
 
 public:
-    vector<string> program;
+    std::vector<std::string> program;
 
     Core() : registers(), pc(0) {}
 
@@ -32,7 +30,7 @@ public:
         }
     }
 
-    const unordered_map<string, int>& getRegisters() const {
+    const std::unordered_map<std::string, int>& getRegisters() const {
         return registers;
     }
     void reset() {
@@ -50,7 +48,76 @@ public:
 };
 
 int Core::execute(std::vector<int>& memory) {
-    ////this has to be added
+    if (pc < program.size()) {
+        std::string instruction = program[pc];
+       
+
+        size_t pos = instruction.find(' ');
+        if (pos != std::string::npos) {
+            std::string opcode = instruction.substr(0, pos);
+            std::string rest = instruction.substr(pos + 1);
+
+            std::vector<std::string> parts;
+            size_t start = 0, end = rest.find(',');
+
+            while (end != std::string::npos) {
+                parts.push_back(rest.substr(start, end - start));
+                start = end + 1;
+                end = rest.find(',', start);
+            }
+            parts.push_back(rest.substr(start, end));
+
+            std::cout << "Executing opcode: " << opcode << std::endl;
+
+            if (opcode == "add") {
+                std::string rd = parts[0];
+                std::string rs1 = parts[1];
+                std::string rs2 = parts[2];
+                registers[rs1] = 3;  // Set value for register at
+                registers[rs2] = 4; // Set value for register rs2
+                registers[rd] = registers[rs1] + registers[rs2];
+                std::cout << "Intermediate state:" << std::endl;
+                for (const auto& entry : registers) {
+                    std::cout << entry.first << ": " << entry.second << std::endl;
+                }
+                pc += 1;
+                return getRegister(rd);
+            } else if (opcode == "ld") {
+                
+                std::string rd = parts[0];
+                std::string memOperand = parts[1];
+                // Parse offset and source register
+                size_t pos = memOperand.find('(');
+                size_t pos1 = memOperand.find(')');
+
+                if (pos != std::string::npos && pos1 != std::string::npos) {
+                    std::string offsetStr = memOperand.substr(0, pos);
+                    std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
+                    int offset = std::stoi(offsetStr);
+                    int srcRegValue = getRegister(srcReg);
+                    int memoryAddress = srcRegValue + offset;
+                    registers[rd] = memory[memoryAddress];
+                    std::cout << "Intermediate state:" << std::endl;
+                    for (const auto& entry : registers) {
+                        std::cout << entry.first << ": " << entry.second << std::endl;
+                    }
+                    pc += 1;
+                    return getRegister(rd);
+                } else {
+                    std::cerr << "Error parsing LD instruction: " << instruction << std::endl;
+                }
+            } else {
+                std::cerr << "Unsupported opcode: " << opcode << std::endl;
+            }
+        } else {
+            std::cerr << "Invalid instruction format: " << instruction << std::endl;
+        }
+    }
+
+    std::cout << "Final state after execution:" << std::endl;
+    for (const auto& entry : registers) {
+        std::cout << entry.first << ": " << entry.second << std::endl;
+    }
     return 0;
 }
 
@@ -84,12 +151,12 @@ public:
         return memory;
     }
 
-    const unordered_map<string, int>& getCoreRegisters(int coreIndex) const {
+    const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const {
         if (coreIndex >= 0 && coreIndex < cores.size()) {
             return cores[coreIndex].getRegisters();
         } else {
             std::cerr << "Invalid core index." << std::endl;
-            static unordered_map<string, int> emptyMap;
+            static std::unordered_map<std::string, int> emptyMap;
             return emptyMap;
         }
     }
@@ -102,7 +169,6 @@ void Processor::run() {
                 cores[i].execute(memory);
             }
         }
-        // Increment clock after executing instructions for each core
         clock += 1;
     }
 }
@@ -110,24 +176,22 @@ void Processor::run() {
 int main() {
     Processor sim;
 
-    sim.cores[0].program.push_back("ADD ra t0 v0");
-    sim.cores[1].program.push_back("LD t9 4(t8)");
-
-    // Ensure reset is called for each core
+    sim.cores[0].program.push_back("add ra,t0,v0");
+    sim.cores[1].program.push_back("ld t9,4(t8)");
     for (auto& core : sim.cores) {
         core.reset();
     }
 
-    sim.cores[0].setRegister("v0", 5);
+   // sim.cores[0].setRegister("v0", 7);
     sim.cores[0].setRegister("t0", 10);
 
     sim.cores[1].setRegister("t8", 1);
 
-    sim.setMemory(268500996, 8);  // Set the value at memory address 268500996 to 8
+    sim.setMemory(268500992+20, 8); 
 
     sim.run();
 
-    // Display the state of the processor after execution
+    
     const auto& coreRegisters0 = sim.getCoreRegisters(0);
     const auto& coreRegisters1 = sim.getCoreRegisters(1);
 
