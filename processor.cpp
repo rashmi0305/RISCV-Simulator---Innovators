@@ -141,6 +141,7 @@ int main() {
     for (const auto& entry : coreRegisters1) {
         std::cout << entry.first << ": " << entry.second << std::endl;
     }
+    std::cout<<" ";
 
     return 0;
 }
