@@ -106,7 +106,18 @@ int Core::execute(std::vector<int>& memory) {
                 } else {
                     std::cerr << "Error parsing LD instruction: " << instruction << std::endl;
                 }
-            } else {
+            } 
+            else if(opcode == "sll"){
+                 ///////
+            }
+            else if(opcode == "srl"){
+            ////////
+
+            }
+            else if(opcode == "li"){
+            //////////
+
+            }else {
                 std::cerr << "Unsupported opcode: " << opcode << std::endl;
             }
         } else {
