@@ -35,12 +35,12 @@ public:
     }
     void reset() {
         registers = {
-            {"r0", 0}, {"at", 0}, {"v0", 0}, {"v1", 0}, {"a0", 0}, {"a1", 0},
-            {"a2", 0}, {"a3", 0}, {"t0", 0}, {"t1", 0}, {"t2", 0}, {"t3", 0},
-            {"t4", 0}, {"t5", 0}, {"t6", 0}, {"t7", 0}, {"s0", 0}, {"s1", 0},
-            {"s2", 0}, {"s3", 0}, {"s4", 0}, {"s5", 0}, {"s6", 0}, {"s7", 0},
-            {"t8", 0}, {"t9", 0}, {"k0", 0}, {"k1", 0}, {"gp", 0}, {"sp", 0},
-            {"s8", 0}, {"ra", 0}
+            {"x0", 0}, {"x1", 0}, {"x2", 0}, {"x3", 0}, {"x4", 0}, {"x5", 0},
+            {"x6", 0}, {"x7", 0}, {"x8", 0}, {"x9", 0}, {"x10", 0}, {"x11", 0},
+            {"x12", 0}, {"x13", 0}, {"x14", 0}, {"x15", 0}, {"x16", 0}, {"x17", 0},
+            {"x18", 0}, {"x19", 0}, {"x20", 0}, {"x21", 0}, {"x22", 0}, {"x23", 0},
+            {"x24", 0}, {"x25", 0}, {"x26", 0}, {"x27", 0}, {"x28", 0}, {"x29", 0},
+            {"x30", 0}, {"x31", 0}
         };
 
         std::cout << "Reset processor" << std::endl;
@@ -73,9 +73,8 @@ int Core::execute(std::vector<int>& memory) {
                 std::string rd = parts[0];
                 std::string rs1 = parts[1];
                 std::string rs2 = parts[2];
-                registers[rs1] = 3;  // Set value for register at
-                registers[rs2] = 4; // Set value for register rs2
-                registers[rd] = registers[rs1] + registers[rs2];
+                int m=getRegister(parts[1])+getRegister(parts[2]);
+                setRegister(parts[0],m);
                 std::cout << "Intermediate state:" << std::endl;
                 for (const auto& entry : registers) {
                     std::cout << entry.first << ": " << entry.second << std::endl;
@@ -94,9 +93,10 @@ int Core::execute(std::vector<int>& memory) {
                     std::string offsetStr = memOperand.substr(0, pos);
                     std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
                     int offset = std::stoi(offsetStr);
-                    int srcRegValue = getRegister(srcReg);
+                     int srcRegValue = getRegister(srcReg);
                     int memoryAddress = srcRegValue + offset;
-                    registers[rd] = memory[memoryAddress];
+                    setRegister(rd,memory[memoryAddress]);
+                    //registers[rd] = memory[memoryAddress];
                     std::cout << "Intermediate state:" << std::endl;
                     for (const auto& entry : registers) {
                         std::cout << entry.first << ": " << entry.second << std::endl;
@@ -116,8 +116,32 @@ int Core::execute(std::vector<int>& memory) {
             }
             else if(opcode == "li"){
             //////////
+            
 
             }
+
+           else if (opcode == "j") {
+                int targetAddress = std::stoi(parts[0]);
+                pc = targetAddress; 
+                return 0; 
+            } 
+            else if (opcode == "beq") {
+               std::string src1 = parts[1].substr(1); // Remove the "$" from the register name
+    std::string src2 = parts[2].substr(1);
+    std::string destLabel = parts[3] + ":";
+
+    int val1 = getRegister(src1);
+    int val2 = getRegister(src2);
+
+                if (val1 != val2) {
+                       pc = stoi(destLabel);
+                 } else {
+                pc += 1;
+                 }
+
+    return pc;
+}
+           
             else if (opcode == "addi") {
                 std::string rd = parts[0];
                 std::string rs = parts[1];

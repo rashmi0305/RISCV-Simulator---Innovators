@@ -1,3 +1,45 @@
-addi k0 k1 1
-add k0 k0 k1
-sub k0 k0 k1
+.data 
+arr: .word 7,2,6,5
+str: .string " "
+.text
+la x1 arr
+la x2 arr #restoring the address of x1 to original after partial sorting
+addi x3 x0 0 #i
+addi x4 x0 0 #j
+addi x5 x0 4
+addi x6 x5 -1 #n-1
+oloop:
+    beq x3 x5 print
+    addi x4 x0 0
+    addi x1 x2 0
+    sub x6 x5 x3
+    iloop:
+        beq x4 x6 Exit1
+        lw x8 0(x1)
+        lw x9 4(x1)
+        blt x9 x8 swap #it for swaping the numbers
+        addi x1 x1 4
+        addi x4 x4 1 
+        j iloop       
+    swap:
+            sw x9 0(x1)
+            sw x8 4(x1)
+            addi x4 x4 1
+            addi x1 x1 4
+            j iloop
+   Exit1:
+           addi x3 x3 1
+           j oloop
+  
+
+print:
+      lw x11 0(x2)
+      add a0 x11 x0
+      li a7 1
+      ecall
+      la a0 str
+      li a7 4
+      ecall
+      addi x2 x2 4
+      addi x5 x5 -1
+      bne x5 x0 print
