@@ -32,6 +32,8 @@
 
         file.close();
     }
+    //check
+    class Core{};
     class Processor {
         //////////
         public:
