@@ -106,7 +106,7 @@ int Core::execute(std::vector<int>& memory) {
                 } else {
                     std::cerr << "Error parsing LD instruction: " << instruction << std::endl;
                 }
-            } 
+            }
             else if(opcode == "sll"){
                  ///////
             }
@@ -117,19 +117,59 @@ int Core::execute(std::vector<int>& memory) {
             else if(opcode == "li"){
             //////////
 
-            }else {
+            }
+            else if (opcode == "addi") {
+                std::string rd = parts[0];
+                std::string rs = parts[1];
+                int immediate = std::stoi(parts[2]);
+                if (registers.find(rs) != registers.end()) {
+                    registers[rs] = 3;  // Set value for register rs
+                    registers[rd] = registers[rs] + immediate;
+                    std::cout << "Intermediate state:" << std::endl;
+                    for (const auto& entry : registers) {
+                        std::cout << entry.first << ": " << entry.second << std::endl;
+                    }
+                    pc += 1;
+                } else {
+                    std::cerr << "Source register " << rs << " not found." << std::endl;
+                }}
+                
+             else if (opcode == "sw") {
+                std::string srcReg = parts[0];
+                std::cout<<parts[0]<<std::endl;
+                std::string memOperand = parts[1];
+                // Parse offset and destination register
+                size_t pos = memOperand.find('(');
+                size_t pos1 = memOperand.find(')');
+                if (pos != std::string::npos && pos1 != std::string::npos) {
+                    std::string offsetStr = memOperand.substr(0, pos);
+                    std::string destReg = memOperand.substr(pos + 1, pos1 - pos - 1);
+                    int offset = std::stoi(offsetStr);
+                    int destRegValue = getRegister(destReg);
+                    int memoryAddress = destRegValue + offset;
+                    memory[memoryAddress] = getRegister(srcReg);
+                    std::cout << "Intermediate state:" << std::endl;
+                    for (const auto& entry : memory) {
+                        std::cout << entry << std::endl;
+                    }
+                    pc += 1;
+                    std::cout << "Final state after execution:" << std::endl;
+                    for (const auto& entry : memory) {
+                        std::cout << entry<<std::endl;
+                    }
+    
+                } else {
+                    std::cerr << "Error parsing SW instruction: " << instruction << std::endl;
+                }
+        } 
+        else {
+>>>>>>> 1fc92bf4459eae878a9367dec3672a63f1b71bd1
                 std::cerr << "Unsupported opcode: " << opcode << std::endl;
             }
-        } else {
-            std::cerr << "Invalid instruction format: " << instruction << std::endl;
         }
     }
 
-    std::cout << "Final state after execution:" << std::endl;
-    for (const auto& entry : registers) {
-        std::cout << entry.first << ": " << entry.second << std::endl;
-    }
-    return 0;
+    
 }
 
 class Processor {
@@ -187,19 +227,18 @@ void Processor::run() {
 int main() {
     Processor sim;
 
-    sim.cores[0].program.push_back("add ra,t0,v0");
-    sim.cores[1].program.push_back("ld t9,4(t8)");
+    sim.cores[0].program.push_back("addi ra,t0,12");
+    sim.cores[1].program.push_back("sw t9,4(t8)");
     for (auto& core : sim.cores) {
         core.reset();
     }
 
    // sim.cores[0].setRegister("v0", 7);
     sim.cores[0].setRegister("t0", 10);
-
-    sim.cores[1].setRegister("t8", 1);
-
     sim.setMemory(268500992+20, 8); 
+    sim.cores[1].setRegister("t8", 2);
 
+   
     sim.run();
 
     
