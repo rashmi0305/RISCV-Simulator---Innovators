@@ -163,7 +163,6 @@ int Core::execute(std::vector<int>& memory) {
                 }
         } 
         else {
->>>>>>> 1fc92bf4459eae878a9367dec3672a63f1b71bd1
                 std::cerr << "Unsupported opcode: " << opcode << std::endl;
             }
         }
