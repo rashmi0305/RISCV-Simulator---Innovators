@@ -44,8 +44,8 @@
 
     sim.cores[0].setRegister("t0", 10);
     sim.cores[1].setRegister("t8", 268500992); // Set t8 to a valid memory address
-    sim.cores[0].readProgramFromFile("add1.txt");
-    sim.cores[1].readProgramFromFile("ld.txt");
+    sim.cores[0].readProgramFromFile("code1.txt");
+    sim.cores[1].readProgramFromFile("code2.txt");
     for (auto& core : sim.cores) {
         core.reset();
     }
