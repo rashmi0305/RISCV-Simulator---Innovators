@@ -28,10 +28,10 @@ Core::Core() : registers(), pc(0) {}
 
 int Core::execute(std::vector<int>& memory) {
     std::cout<<"Hi";
-      while (pc < program.size()) {
+       while (pc < program.size()) {
     
             const std::vector<std::string>& instruction = program[pc];
-            if (instruction[0] == "" || instruction[0] == "#" || instruction[0].find(".") != std::string::npos) {
+            if (instruction[0] == "#" || instruction[0].find(".") != std::string::npos) {
                 pc = pc + 1;
    
             }
@@ -43,20 +43,18 @@ int Core::execute(std::vector<int>& memory) {
             if (!instruction.empty()) {
                 std::string opcode = instruction[0];
                 std::cout<<opcode;
-                 if (opcode == "add") {
+                if (opcode == "add") {
                     if (instruction.size() == 4) {
                         std::string rd = instruction[1];
                         std::string rs1 = instruction[2];
                         std::string rs2 = instruction[3];
-                        registers[rs1] = 3;  // Set value for register at
-                        registers[rs2] = 4; // Set value for register rs2
                         registers[rd] = registers[rs1] + registers[rs2];
                         std::cout << "Intermediate state:" << std::endl;
                         for (const auto& entry : registers) {
                          std::cout << entry.first << ": " << entry.second << std::endl;
                          }
                          pc += 1;
-                         return getRegister(rd);
+                        return getRegister(rd);
                         } else {
                         std::cerr << "Invalid 'add' instruction format at line " << pc << std::endl;
                         // Handle error: Invalid instruction format
@@ -77,17 +75,36 @@ int Core::execute(std::vector<int>& memory) {
                             int memoryAddress = srcRegValue + offset;
                             registers[rd] = memory[memoryAddress];
                             std::cout << "Intermediate ld state:" << std::endl;
-                            for (const auto& entry : memory) {
-                                std::cout << entry<< " ";
-                                }
+                            for(int i=0;i<55;i++)
+                            {
+                                std::cout<<memory[i];
+                            }
                         pc += 1;
                         return getRegister(rd);
                     } 
                     } else {
-                         std::cerr << "Invalid 'ld' instruction format at line " << pc << std::endl;
+                         std::cerr << "Invalid 'lw' instruction format at line " << pc << std::endl;
                          }
                  }
-                 else if (opcode == "srl") {
+                 else if (opcode == "bge") {
+    if (instruction.size() == 4) {
+        std::string rs1 = instruction[1];
+        std::string rs2 = instruction[2];
+        std::string label = instruction[3];
+        int addr = labels[label+":"]; // Get the address corresponding to the label
+        if (registers[rs1] >= registers[rs2]) {
+            pc = addr; // Update the program counter to the address if rs1 >= rs2
+        } else {
+            pc += 1; // Increment the program counter otherwise
+        }
+        // No need to return a value in this case
+    } else {
+        std::cerr << "Invalid 'bge' instruction format at line " << pc << std::endl;
+        // Handle error: Invalid instruction format
+    }
+}
+
+                 else if (opcode == "srli") {
                     if (instruction.size() == 4) {
                     std::string rd = instruction[1];
                     std::string rs = instruction[2];
@@ -108,7 +125,7 @@ int Core::execute(std::vector<int>& memory) {
                      // Handle error: Invalid instruction format
                 }
 }
-else if (opcode == "sll") {
+else if (opcode == "slli") {
     if (instruction.size() == 4) {
         std::string rd = instruction[1];
         std::string rs = instruction[2];
@@ -125,7 +142,7 @@ else if (opcode == "sll") {
             std::cerr << "Source register " << rs << " not found." << std::endl;
         }
     } else {
-        std::cerr << "Invalid 'sll' instruction format at line " << pc << std::endl;
+        std::cerr << "Invalid 'slli' instruction format at line " << pc << std::endl;
         // Handle error: Invalid instruction format
     }
 }
@@ -275,9 +292,10 @@ else if (opcode == "sub") {
     
                         pc += 1;
                 std::cout << "Final state after sw execution:" << std::endl;
-                for (const auto& entry : memory) {
-                    std::cout << entry <<" ";
-                }
+                for(int i=0;i<55;i++)
+                            {
+                                std::cout<<memory[i];
+                            }
             } else {
                 std::cerr << "Destination register " << destReg << " not found." << std::endl;
             }
@@ -342,6 +360,30 @@ void Core::reset() {
 }
 
 
+// class Memory {
+// private:
+//     std::vector<int> data;
+
+// public:
+//     Memory() : data(4096, 0) { } // Default constructor
+    
+//     // Copy constructor
+//     Memory(const Memory& other) : data(other.data) {
+//         // Perform a deep copy if necessary
+//     }
+    
+//     // Copy assignment operator
+//     Memory& operator=(const Memory& other) {
+//         if (this != &other) {
+//             data = other.data; // Simply copy the data vector
+//             // Perform a deep copy if necessary
+//         }
+//         return *this;
+//     }
+    
+//     // Other member functions to manipulate memory data
+// };
+
 class Processor {
 public:
     std::vector<int> memory;
@@ -358,18 +400,46 @@ public:
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
 };
 Processor::Processor() : memory(4096, 0), clock(0), cores(2) {}
+// void Processor::run() {
+//    std::cout<<"prog size is"<<cores[0].program.size()<<std::endl;
+//     std::cout<<"prog size is"<<cores[1].program.size()<<std::endl;
+//     while (clock < std::max(cores[0].program.size(), cores[1].program.size())) {
+//         for (int i = 0; i < 2; ++i) {
+//             if (clock < cores[i].program.size()) {
+//                 cores[i].execute(memory);
+//             }
+//         }
+//         clock += 1;
+//     }
+// }
 void Processor::run() {
-   // std::cout<<"prog size is"<<cores[0].program.size()<<std::endl;
-    //std::cout<<"prog size is"<<cores[1].program.size()<<std::endl;
-    while (clock < std::max(cores[0].program.size(), cores[1].program.size())) {
-        for (int i = 0; i < 2; ++i) {
-            if (clock < cores[i].program.size()) {
+    while (true) {
+        bool allCoresCompleted = true;
+        for (int i = 0; i < cores.size(); ++i) {
+            if (cores[i].pc < cores[i].program.size()) {
                 cores[i].execute(memory);
+                if (cores[i].pc < cores[i].program.size()) {
+                    allCoresCompleted = false;
+                }
             }
         }
-        clock += 1;
+        if (allCoresCompleted) {
+            break; // All cores have completed execution
+        }
     }
 }
+
+//     void Processor::run() {
+//     int currentCore = 0;
+//     while (clock < std::max(cores[0].program.size(), cores[1].program.size())) {
+//         if (clock < cores[currentCore].program.size()) {
+//             cores[currentCore].execute(memory);
+//         }
+//         currentCore = (currentCore + 1) % 2; // Switch to the other core
+//         clock += 1;
+//     }
+// }
+
 
 void Processor::setInitialMemory(int wordAddress, int value) {
     // Implementation of setInitialMemory function
@@ -408,7 +478,7 @@ const std::unordered_map<std::string, int>& Processor::getCoreRegisters(int core
   
 class Parser {
 private:
-    Processor processor; // Member variable of type Processor
+    int index;
     std::unordered_map<std::string, std::string> registerAliases = {
         {"x0","zero"},{"x1", "ra"}, {"x2", "sp"}, {"x3", "gp"}, {"x4", "tp"}, {"x5", "t0"},{"x6", "t1"}, {"x7", "t2"}, {"x8", "s0"}, {"x9", "s1"}, {"x10", "a0"},
         {"x11", "a1"}, {"x12", "a2"}, {"x13", "a3"}, {"x14", "a4"}, {"x15", "a5"},{"x16", "a6"}, {"x17", "a7"}, {"x18", "s2"}, {"x19", "s3"}, {"x20", "s4"},
@@ -416,11 +486,17 @@ private:
     };
 
 public:
-    Processor getProcessor()
+    Parser(){index=0;}
+    int getIndex()
     {
-        return processor;
+        return index;
     }
-    std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parseFromFile(const std::string& filePath) {
+    void setIndex(int a)
+    {
+        index=a;
+    }
+
+    std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parseFromFile(const std::string& filePath,std::vector<int>& memory) {
         std::ifstream file(filePath);
         if (!file.is_open()) {
             std::cerr << "Error opening file: " << filePath << std::endl;
@@ -430,7 +506,7 @@ public:
         std::vector<std::vector<std::string>> lineWiseSplit;
         std::map<std::string, int> labels;
         std::string line;
-        int index = 268500992; // Starting memory index
+        // int index =0; // Starting memory index
 
         while (std::getline(file, line)) {
             std::replace(line.begin(), line.end(), ',', ' ');
@@ -458,24 +534,26 @@ public:
                 labels[lineWiseSplit[i][0]] = i;
             }
         }
-
+        std::cout<<"INDEX:"<<index<<std::endl;
         for (size_t i = 0; i < lineWiseSplit.size(); ++i) {
             if (lineWiseSplit[i][0].find(":") != std::string::npos && lineWiseSplit[i].size() > 1 && lineWiseSplit[i][1] == ".word") {
                 std::vector<std::string>& line = lineWiseSplit[i];
                 line.erase(line.begin());
                 for (size_t j = 1; j < line.size(); ++j, index += 4) {
                     int value = std::stoi(line[j]);
-                    processor.setInitialMemory(index, value);
+                    memory[index] = value;
+                    //processor.setInitialMemory(index, value);
                 }
-                 std::cout << "Core 0 Memory:" << std::endl;
-                for (const auto& entry : processor.getMemoryContents()) {
-                    std::cout << entry<<" ";
-                }
+                //  std::cout << "Core 0 Memory:" << std::endl;
+                // for (const auto& entry : processor.getMemoryContents()) {
+                //     std::cout << entry<<" ";
+                // }
                 
             } else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".word") {
                 for (size_t j = 1; j < lineWiseSplit[i].size(); ++j, index += 4) {
                     int value = std::stoi(lineWiseSplit[i][j]);
-                    processor.setInitialMemory(index, value);
+                    memory[index] = value;
+                    //processor.setInitialMemory(index, value);
                 }
             }
         }
@@ -484,10 +562,11 @@ public:
     }
 };
 int main() {
+    
+    Processor sim;
     Parser parser;
-    Processor sim=parser.getProcessor();
-    auto parsedProgram1 = parser.parseFromFile("code1.txt"); // Parse the program from a file
-    auto parsedProgram2 = parser.parseFromFile("code2.txt");//2nd file
+    auto parsedProgram1 = parser.parseFromFile("code1.txt",sim.memory); // Parse the program from a file
+    auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
 
@@ -498,12 +577,7 @@ int main() {
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";
     }
-    sim.cores[0].setRegister("v0", 7);
-    sim.cores[0].setRegister("t0", 10);
-    sim.setMemory(268500992+20, 8); 
-    sim.cores[1].setRegister("t8", 4);
-
-
+   
     sim.run();
 
     
