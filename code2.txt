@@ -1,10 +1,10 @@
 .data
-arr1: .word 1,16,2,256,8
+arr1: .word 1,16,2,256,8,156,34,72
 .text
         li x3,24
         addi x5, x0, 0
-        addi x19, x0, 5
-        addi x18, x0, 4
+        addi x19, x0, 8
+        addi x18, x0, 8
 L1:
         addi x7, x5, 0
         addi x6, x5, 1
