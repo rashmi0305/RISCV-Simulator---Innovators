@@ -76,10 +76,10 @@ int Core::execute(std::vector<int>& memory) {
                             int srcRegValue = getRegister(srcReg);
                             int memoryAddress = srcRegValue + offset;
                             registers[rd] = memory[memoryAddress];
-                            //std::cout << "Intermediate state:" << std::endl;
-                            // for (const auto& entry : memory) {
-                            //     std::cout << entry<< std::endl;
-                            //     }
+                            std::cout << "Intermediate ld state:" << std::endl;
+                            for (const auto& entry : memory) {
+                                std::cout << entry<< " ";
+                                }
                         pc += 1;
                         return getRegister(rd);
                     } 
@@ -150,7 +150,7 @@ else if (opcode == "beq") {
         std::string rs1 = instruction[1];
         std::string rs2 = instruction[2];
         std::string label = instruction[3];
-        int addr = labels[label]; // Get the address corresponding to the label
+        int addr = labels[label+":"]; // Get the address corresponding to the label
         if (getRegister(rs1) == getRegister(rs2)) {
             pc = addr; // Update the program counter to the address if the registers are equal
         } else {
@@ -167,7 +167,7 @@ else if (opcode == "blt") {
         std::string rs1 = instruction[1];
         std::string rs2 = instruction[2];
         std::string label = instruction[3];
-        int addr = labels[label]; // Get the address corresponding to the label
+        int addr = labels[label+":"]; // Get the address corresponding to the label
         if (getRegister(rs1) < getRegister(rs2)) {
             pc = addr; // Update the program counter to the address if rs1 < rs2
         } else {
@@ -182,7 +182,7 @@ else if (opcode == "blt") {
 else if (opcode == "j") {
     if (instruction.size() == 2) {
         std::string label = instruction[1];
-        int addr = labels[label];
+        int addr = labels[label+":"];
         std::cout<<"adr"<<addr<<std::endl; // Get the address corresponding to the label
         pc = addr; // Update the program counter to the address
         // No need to return a value in this case
@@ -198,7 +198,7 @@ else if (opcode == "bne") {
         std::string label = instruction[3];
         if (registers.find(rs1) != registers.end() && registers.find(rs2) != registers.end()) {
             if (registers[rs1] != registers[rs2]) {
-                int addr = labels[label]; // Get the address corresponding to the label
+                int addr = labels[label+":"]; // Get the address corresponding to the label
                 pc = addr; // Update the program counter to the address
                 // No need to return a value in this case
             } else {
@@ -274,10 +274,10 @@ else if (opcode == "sub") {
                              memory[memoryAddress] = registers[srcReg];
     
                         pc += 1;
-                // std::cout << "Final state after execution:" << std::endl;
-                // for (const auto& entry : memory) {
-                //     std::cout << entry << std::endl;
-                // }
+                std::cout << "Final state after sw execution:" << std::endl;
+                for (const auto& entry : memory) {
+                    std::cout << entry <<" ";
+                }
             } else {
                 std::cerr << "Destination register " << destReg << " not found." << std::endl;
             }
@@ -416,6 +416,10 @@ private:
     };
 
 public:
+    Processor getProcessor()
+    {
+        return processor;
+    }
     std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parseFromFile(const std::string& filePath) {
         std::ifstream file(filePath);
         if (!file.is_open()) {
@@ -463,6 +467,11 @@ public:
                     int value = std::stoi(line[j]);
                     processor.setInitialMemory(index, value);
                 }
+                 std::cout << "Core 0 Memory:" << std::endl;
+                for (const auto& entry : processor.getMemoryContents()) {
+                    std::cout << entry<<" ";
+                }
+                
             } else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".word") {
                 for (size_t j = 1; j < lineWiseSplit[i].size(); ++j, index += 4) {
                     int value = std::stoi(lineWiseSplit[i][j]);
@@ -475,8 +484,8 @@ public:
     }
 };
 int main() {
-    Processor sim;
     Parser parser;
+    Processor sim=parser.getProcessor();
     auto parsedProgram1 = parser.parseFromFile("code1.txt"); // Parse the program from a file
     auto parsedProgram2 = parser.parseFromFile("code2.txt");//2nd file
     sim.cores[0].setProgram(parsedProgram1);
@@ -485,7 +494,10 @@ int main() {
     for (auto& core : sim.cores) {
         core.reset();
     }
-
+    std::cout << "Core 0 Memory:" << std::endl;
+    for (const auto& entry : sim.getMemoryContents()) {
+        std::cout << entry<<" ";
+    }
     sim.cores[0].setRegister("v0", 7);
     sim.cores[0].setRegister("t0", 10);
     sim.setMemory(268500992+20, 8); 
@@ -497,11 +509,16 @@ int main() {
     
     const auto& coreRegisters0 = sim.getCoreRegisters(0);
     const auto& coreRegisters1 = sim.getCoreRegisters(1);
+    const auto& coreMem0=sim.getMemoryContents();
 
     std::cout << "+============ After Run ============:" << std::endl;
     std::cout << "Core 0 Registers:" << std::endl;
     for (const auto& entry : coreRegisters0) {
         std::cout << entry.first << ": " << entry.second << std::endl;
+    }
+    std::cout << "Core 0 Memory:" << std::endl;
+    for (const auto& entry : coreMem0) {
+        std::cout << entry<<" ";
     }
 
     std::cout << "Core 1 Registers:" << std::endl;
