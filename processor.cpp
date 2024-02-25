@@ -76,10 +76,10 @@ int Core::execute(std::vector<int>& memory) {
                             int srcRegValue = getRegister(srcReg);
                             int memoryAddress = srcRegValue + offset;
                             registers[rd] = memory[memoryAddress];
-                            std::cout << "Intermediate state:" << std::endl;
-                            for (const auto& entry : memory) {
-                                std::cout << entry<< std::endl;
-                                }
+                            //std::cout << "Intermediate state:" << std::endl;
+                            // for (const auto& entry : memory) {
+                            //     std::cout << entry<< std::endl;
+                            //     }
                         pc += 1;
                         return getRegister(rd);
                     } 
@@ -88,25 +88,25 @@ int Core::execute(std::vector<int>& memory) {
                          }
                  }
                  else if (opcode == "srl") {
-    if (instruction.size() == 4) {
-        std::string rd = instruction[1];
-        std::string rs = instruction[2];
-        int immediate = std::stoi(instruction[3]);
-        if (registers.find(rs) != registers.end()) {
-            int rsValue = registers[rs];
-            registers[rd] = rsValue >> immediate;
-            std::cout << "Intermediate state:" << std::endl;
-            for (const auto& entry : registers) {
-                std::cout << entry.first << ": " << entry.second << std::endl;
-            }
-            pc += 1;
-        } else {
-            std::cerr << "Source register " << rs << " not found." << std::endl;
-        }
-    } else {
-        std::cerr << "Invalid 'srl' instruction format at line " << pc << std::endl;
-        // Handle error: Invalid instruction format
-    }
+                    if (instruction.size() == 4) {
+                    std::string rd = instruction[1];
+                    std::string rs = instruction[2];
+                    int immediate = std::stoi(instruction[3]);
+                    if (registers.find(rs) != registers.end()) {
+                    int rsValue = registers[rs];
+                    registers[rd] = rsValue >> immediate;
+                    std::cout << "Intermediate state:" << std::endl;
+                    for (const auto& entry : registers) {
+                        std::cout << entry.first << ": " << entry.second << std::endl;
+                    }
+                    pc += 1;
+                 } else {
+                    std::cerr << "Source register " << rs << " not found." << std::endl;
+                 }
+                 } else {
+                     std::cerr << "Invalid 'srl' instruction format at line " << pc << std::endl;
+                     // Handle error: Invalid instruction format
+                }
 }
 else if (opcode == "sll") {
     if (instruction.size() == 4) {
@@ -182,7 +182,8 @@ else if (opcode == "blt") {
 else if (opcode == "j") {
     if (instruction.size() == 2) {
         std::string label = instruction[1];
-        int addr = labels[label]; // Get the address corresponding to the label
+        int addr = labels[label];
+        std::cout<<"adr"<<addr<<std::endl; // Get the address corresponding to the label
         pc = addr; // Update the program counter to the address
         // No need to return a value in this case
     } else {
@@ -212,6 +213,29 @@ else if (opcode == "bne") {
         // Handle error: Invalid instruction format
     }
 }
+else if (opcode == "sub") {
+    if (instruction.size() == 4) {
+        std::string rd = instruction[1];
+        std::string rs1 = instruction[2];
+        std::string rs2 = instruction[3];
+        if (registers.find(rs1) != registers.end() && registers.find(rs2) != registers.end()) {
+            registers[rd] = registers[rs1] - registers[rs2];
+            std::cout << "Intermediate state:" << std::endl;
+            for (const auto& entry : registers) {
+                std::cout << entry.first << ": " << entry.second << std::endl;
+            }
+            pc += 1;
+            // Return value not specified in your original code, update as needed
+        } else {
+            std::cerr << "Source register not found in 'sub' instruction at line " << pc << std::endl;
+            // Handle error: Source register not found
+        }
+    } else {
+        std::cerr << "Invalid 'sub' instruction format at line " << pc << std::endl;
+        // Handle error: Invalid instruction format
+    }
+}
+
 
                  else if (opcode == "addi") {
                     if (instruction.size() == 4) {
@@ -248,15 +272,12 @@ else if (opcode == "bne") {
                             int destRegValue = registers[destReg];
                             int memoryAddress = destRegValue + offset;
                              memory[memoryAddress] = registers[srcReg];
-                            std::cout << "Intermediate state:" << std::endl;
-                            for (const auto& entry : memory) {
-                                 std::cout << entry << std::endl;
-                            }
+    
                         pc += 1;
-                std::cout << "Final state after execution:" << std::endl;
-                for (const auto& entry : memory) {
-                    std::cout << entry << std::endl;
-                }
+                // std::cout << "Final state after execution:" << std::endl;
+                // for (const auto& entry : memory) {
+                //     std::cout << entry << std::endl;
+                // }
             } else {
                 std::cerr << "Destination register " << destReg << " not found." << std::endl;
             }
@@ -271,6 +292,7 @@ else if (opcode == "bne") {
 }
 
             }
+            return 0;
         }
     
 
@@ -308,12 +330,12 @@ const std::unordered_map<std::string, int>& Core::getRegisters() const {
 void Core::reset() {
     // Implementation of reset function
      registers = {
-            {"r0", 0}, {"at", 0}, {"v0", 0}, {"v1", 0}, {"a0", 0}, {"a1", 0},
-            {"a2", 0}, {"a3", 0}, {"t0", 0}, {"t1", 0}, {"t2", 0}, {"t3", 0},
-            {"t4", 0}, {"t5", 0}, {"t6", 0}, {"t7", 0}, {"s0", 0}, {"s1", 0},
-            {"s2", 0}, {"s3", 0}, {"s4", 0}, {"s5", 0}, {"s6", 0}, {"s7", 0},
-            {"t8", 0}, {"t9", 0}, {"k0", 0}, {"k1", 0}, {"gp", 0}, {"sp", 0},
-            {"s8", 0}, {"ra", 0}
+            {"zero", 0}, {"a0", 0}, {"a1", 0},{"a2", 0},{"a3", 0}, {"t0", 0},
+            {"t1", 0}, {"t2", 0}, {"t3", 0}, {"t4", 0}, {"t5", 0}, {"t6", 0},
+            {"s0", 0}, {"s1", 0},{"s2", 0}, {"s3", 0}, {"s4", 0}, {"s5", 0}, 
+            {"s6", 0},{"s7", 0}, {"gp", 0}, {"sp", 0}, {"s8", 0}, {"ra", 0},
+            {"tp",0},{"a4",0},{"a5",0},{"a6",0},{"a7",0},{"s9",0},
+            {"s10",0},{"s11",0}
         };
 
         std::cout << "Reset processor" << std::endl;
@@ -419,10 +441,10 @@ public:
                 }
             }
             lineWiseSplit.push_back(lineArr);
-            for(auto tokens:lineArr)
-            {
-                std::cout<<tokens<<std::endl;
-            }
+            // for(auto tokens:lineArr)
+            // {
+            //     std::cout<<tokens<<std::endl;
+            // }
             
         }
         
