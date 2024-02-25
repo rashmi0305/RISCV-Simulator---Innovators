@@ -6,7 +6,7 @@
     Minutes:1.Updated code 1 for BUBBLE SORT and code 2 for selection sort
             2.Updated Memory for two codes code 1 and code 2
             3.updated execute function for "ecall" opcode
-            4.Generated LOGII file for expalnation of Memory Usage,Core Registers,parsing of files,shared Memory to Core
+            4.Generated LOGII file for explanation of Memory Usage,Core Registers,parsing of files,shared Memory to Core
             5.Displayed output of processor.cpp file in "LOGII" file for clear output format.
     ======================================================================================
     MinutesofMeetings:
