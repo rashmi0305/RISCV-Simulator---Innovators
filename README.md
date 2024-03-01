@@ -1,6 +1,7 @@
 # Riscv-innovators
 # CO project
- MinutesofMeetings:
+
+    MinutesofMeetings:
     Date: 01-Mar-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Understood how to implement data dependency,latency
@@ -27,7 +28,6 @@
     Members:Rashmitha,Sahiti
     Minutes:1.Worked for sub,addi,srl,sll,li
             2.Finished parser part (for these instructions)
-            
     ======================================================================================
     Date : 22-Feb-2024
     Members:Rashmitha,Sahiti
