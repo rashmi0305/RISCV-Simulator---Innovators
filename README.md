@@ -1,5 +1,11 @@
 # Riscv-innovators
 # CO project
+ MinutesofMeetings:
+    Date: 01-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Understood how to implement data dependency,latency
+            2.Decided to restructure code to write Instruction class
+    ======================================================================================
     MinutesofMeetings:
     Date: 25-Feb-2024
     Members:Rashmitha,Sahiti
@@ -47,12 +53,17 @@
                 2.Looked through references for RISCV and ideas
                 
     ======================================================================================
-    Questions in initial state:
+    Questions we had in initial stages:
+    Phase -2
+    How to check data dependency
+    how to enable and disable data forwarding 
+    how to calculate IPC ,what is the meaning of cycle 
+    how to find whether stall is present or not
+    Phase-1
     how to initialize registers and memory
     should we use map to map register name to its value 
     how to access contents in registers and update the values
-    Questions in intermediate state:
     Should execute have separate file or include inside processor(while pipelining then?)
     Should we consider using enums for register names,instruction types,opcodes or directly access them in string format
-    Should the parser parse from a file containing the instructions or otherwise
+ 
     ======================================================================================
