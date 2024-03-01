@@ -56,14 +56,17 @@
     Questions we had in initial stages:
     Phase -2
     How to check data dependency
-    how to enable and disable data forwarding 
-    how to calculate IPC ,what is the meaning of cycle 
-    how to find whether stall is present or not
+    How to enable and disable data forwarding 
+    How to calculate IPC ,what is the meaning of cycle 
+    How to find whether stall is present or not
+    How to do execution based on latency
+    How to initialize registers between IF,ID/RF,EXE,MEM and WB and take values from it
     Phase-1
-    how to initialize registers and memory
-    should we use map to map register name to its value 
-    how to access contents in registers and update the values
+    How to initialize registers and memory
+    Should we use map to map register name to its value 
+    How to access contents in registers and update the values
     Should execute have separate file or include inside processor(while pipelining then?)
-    Should we consider using enums for register names,instruction types,opcodes or directly access them in string format
+    Should we consider using enums for register names,instruction types,opcodes or directly access 
+    them in string format
  
     ======================================================================================
