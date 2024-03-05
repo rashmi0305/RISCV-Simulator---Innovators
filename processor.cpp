@@ -8,25 +8,130 @@
 #include<algorithm>
 #include<sstream>
 
+class Instruction{
+public:
+
+    std::string opcode;
+    std::string rd;
+    std::string rs1;
+    std::string rs2;
+    int rd_val=0;
+    int rs1_val=0;
+    int rs2_val=0;
+    int imm=0;
+    //int memory_addr=0;
+    int latency=1;
+    bool rd_ready=false;
+    int branch_target=0;
+    int pred_target=0;
+    bool branch_taken=false;
+    bool pred_taken=false;
+    Instruction(){};
+    Instruction::Instruction(std::vector<std::string> data){
+        opcode=data[0];
+    }
+};
+
+
 
 class Core {
 public:
     std::unordered_map<std::string, int> registers;
     int pc;
-   // std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram;
+    int ticks;
+    int cycleCount;
+    int stallCount;
     std::vector<std::vector<std::string>> program;
     std::map<std::string, int> labels;
-    
-    Core();
+    Instruction IF_ID_register;//to store the instructions temporarily in between stages
+    Instruction ID_EX_register;
+    Instruction EX_MEM_register;
+    Instruction MEM_WB_register;        
+
+
+ Core();
     void execute(std::vector<int>& memory);
     int getRegister(const std::string& reg);
     void setRegister(std::string reg, int num);
     void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
     void reset();
+    void pipelineFetch();
+    void pipelineDecode();
+    void pipelineExecute(std::vector<int>& memory);
+    void pipelineMemory(std::vector<int>& memory);
+    void pipelineWriteBack();
 };
-Core::Core() : registers(), pc(0) {}
 
+
+void Core::execute(std::vector<int> &memory) {
+    std::cout << "Start running ..." << std::endl;
+    
+    while (true) {
+        // Increment clock ticks.
+        ticks++;
+
+        // Process pipeline stages backwards.
+        pipelineWriteBack();
+        pipelineMemory(memory);
+        pipelineExecute(memory);
+        pipelineDecode();
+        pipelineFetch();
+
+        // Check if all pipeline stages are clear.
+        if (pc >= program.size()){ //&& IF_ID_register.empty() && ID_EX_register.empty() && EX_MEM_register.empty() && MEM_WB_register.empty()) {
+            break;
+        }
+    }
+
+    std::cout << "Done." << std::endl;
+}
+
+void Core::pipelineFetch() {
+    if (pc < program.size()) {
+        Instruction inst(program[pc]);
+        IF_ID_register =inst;//check if gets copied entirely-maybe problem
+        pc++;
+     }
+     // else {
+    //     IF_ID_register.clear();
+    // }
+}
+
+void Core::pipelineDecode() {
+   // if (!IF_ID_register.empty()) {
+        ID_EX_register = IF_ID_register;
+        //..IF_ID_register.clear();
+    //}
+}
+
+void Core::pipelineExecute(std::vector<int> &memory) {
+    // if (!ID_EX_register.empty()) {
+        // Execute the instruction (not implemented in this example)
+        EX_MEM_register = ID_EX_register;
+        //ID_EX_register.clear();
+    //}
+}
+
+void Core::pipelineMemory(std::vector<int> &memory) {
+    //if (!EX_MEM_register.empty()) {
+        // Access memory if needed (not implemented in this example)
+        MEM_WB_register = EX_MEM_register;
+       // EX_MEM_register.clear();
+   // }
+}
+
+// void Core::pipelineWriteBack() {
+//     if (!MEM_WB_register.empty()) {
+//         // Write back the result (not implemented in this example)
+//         MEM_WB_register.clear();
+//     }
+// }
+
+
+
+//Core::Core() : registers(), pc(0) {}
+Core:: Core():program(), labels(), pc(0), registers(), IF_ID_register(), ID_EX_register(), EX_MEM_register(), MEM_WB_register() {}
 void Core::execute(std::vector<int>& memory) {
     //std::cout<<"Hi";
        while (pc < program.size()) {
