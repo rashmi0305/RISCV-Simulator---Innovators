@@ -15,6 +15,8 @@ public:
     std::string rd;
     std::string rs1;
     std::string rs2;
+    std::string Label;
+    int pc;
     int rd_val=0;
     int rs1_val=0;
     int rs2_val=0;
@@ -29,7 +31,13 @@ public:
     Instruction(){};
     Instruction::Instruction(std::vector<std::string> data){
         opcode=data[0];
+        if(opcode=="add"||opcode=="sub"){
+            rd = data[1];
+            rs1 = data[2];
+            rs2 = data[3];
+        }
     }
+
 };
 
 
@@ -101,6 +109,16 @@ void Core::pipelineFetch() {
 void Core::pipelineDecode() {
    // if (!IF_ID_register.empty()) {
         ID_EX_register = IF_ID_register;
+        if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub"){
+            ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+            ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+            ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+        }
+        if(ID_EX_register.opcode=="addi"){
+            ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+            ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+            ID_EX_register.imm=getRegister(ID_EX_register.rs2);
+        }
         //..IF_ID_register.clear();
     //}
 }
