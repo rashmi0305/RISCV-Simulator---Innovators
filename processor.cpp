@@ -15,14 +15,14 @@ public:
     std::string rd;
     std::string rs1;
     std::string rs2;
-    std::string Label;
+    std::string label;
     int pc;
     int rd_val=0;
     int rs1_val=0;
     int rs2_val=0;
     int imm=0;
-    int offset=0;
-    //int memory_addr=0;
+    //int offset=0;
+    int address=0;
     int latency=1;
     bool rd_ready=false;
     int branch_target=0;
@@ -30,37 +30,105 @@ public:
     bool branch_taken=false;
     bool pred_taken=false;
     Instruction(){};
-    Instruction::Instruction(std::vector<std::string> data){
+    Instruction::Instruction(std::vector<std::string> data,int pc)
+    {
+        this->pc=pc;
         opcode=data[0];
-        if(opcode=="add"||opcode=="sub"){
+        if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
+        {
             rd = data[1];
             rs1 = data[2];
             rs2 = data[3];
         }
-         if(opcode=="addi"){
+        else if(opcode=="addi" || opcode=="srli"|| opcode=="slli")
+        {
             rd = data[1];
             rs1 = data[2];
             imm = std::stoi(data[3]);
         }
-        if(opcode=="srli"||"slli"){
-        std::string rd = data[1];
-        std::string rs = data[2];
-        int immediate = std::stoi(data[3]);
-        }
-         if(opcode=="lw"){
-            std::string rd = data[1];
+        else if(opcode=="lw")//ld rd, imm(rs1)
+        {
+             rd = data[1];
             std::string memOperand = data[2];
-                        // Parse offset and source register
+            // Parse offset and source register
             size_t pos = memOperand.find('(');
             size_t pos1 = memOperand.find(')');
-            if (pos != std::string::npos && pos1 != std::string::npos) {
-                    std::string offsetStr = memOperand.substr(0, pos);
-                    std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
-                    offset = std::stoi(offsetStr);
-                    rs1 =srcReg;
-         }
+            if (pos != std::string::npos && pos1 != std::string::npos) 
+            {
+                std::string offsetStr = memOperand.substr(0, pos);
+                std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
+                imm = std::stoi(offsetStr);
+                rs1 =srcReg;
+            }
+            else
+            {
+                rs1=memOperand;
+            }
+        }
+        else if (opcode == "sw") //sw rs2, imm(rs1)
+        {
+            if (data.size() == 3)
+            {
+               rs2 = data[1];//srcReg
+               std::string memOperand = data[2];
+               // Parse offset and destination register
+               size_t pos = memOperand.find('(');
+               size_t pos1 = memOperand.find(')');
+               if (pos != std::string::npos && pos1 != std::string::npos) {
+                   std::string offsetStr = memOperand.substr(0, pos);
+                   std::string destReg = memOperand.substr(pos + 1, pos1 - pos - 1);
+                   imm = std::stoi(offsetStr);
+                   rs1=destReg;
+               }
+               else
+               {
+                   //print error
+               }
+            }
+            else
+            {
+               std::cerr << "Invalid instruction format at line " << pc << std::endl; 
+            }
+        }
+        else if (opcode == "bge" ||opcode=="bne"||opcode=="beq" ||opcode=="blt") 
+        {
+            if (data.size() == 4) 
+            {
+                rs1 = data[1];
+                rs2 = data[2];
+                label = data[3];
+               
+            }
+            else 
+            {
+                std::cerr << "Invalid instruction format at line " << pc << std::endl; 
+            }
+        }
+         else if (opcode == "li")
+        {
+            if (data.size() == 3)
+            {
+                rd = data[1];
+                imm = std::stoi(data[2]);
+            }
+            else 
+            {
+                std::cerr << "Invalid 'li' instruction format at line " << pc << std::endl;
+            }
+        }
+        else if (opcode == "j") 
+        {
+            if (data.size() == 2)
+            {
+                label = data[1];
+            } 
+            else 
+            {
+                std::cerr << "Invalid 'j' instruction format at line " << pc << std::endl;  
+            }
+        }
 
-    }
+
     }
 
 };
@@ -122,7 +190,7 @@ void Core::execute(std::vector<int> &memory) {
 
 void Core::pipelineFetch() {
     if (pc < program.size()) {
-        Instruction inst(program[pc]);
+        Instruction inst(program[pc],pc);
         IF_ID_register =inst;//check if gets copied entirely-maybe problem
         pc++;
      }
@@ -133,42 +201,128 @@ void Core::pipelineFetch() {
 
 void Core::pipelineDecode() {
    // if (!IF_ID_register.empty()) {
-        ID_EX_register = IF_ID_register;
-        if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub"){
-            ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
-            ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
-            ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
-        }
-        if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli"){
-            ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
-            ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
-        }
+    ID_EX_register = IF_ID_register;
+    if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
+    {
+        ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+        ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+        ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+    }
+    if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
+    {
+        ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+        ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+    }
+    else if (ID_EX_register.opcode == "lw")
+    {
+    // Parse the instruction and extract rd, imm, and rs1
+    ID_EX_register.rd_val = getRegister(ID_EX_register.rd);
+    ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
+    // Extract the immediate value and sign-extend it if it is in binary,not now
+    //ID_EX_register.imm = signExtend(ID_EX_register.imm);
+    }
+    else if (ID_EX_register.opcode == "sw") 
+    {
+        // Parse the instruction and extract rs2, imm, and rs1
+        ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
+        ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
+        // Extract the immediate value and sign-extend it
+       // ID_EX_register.imm = signExtend(ID_EX_register.imm);
+    }
+    else if (ID_EX_register.opcode == "bge" || ID_EX_register.opcode == "bne" ||ID_EX_register.opcode == "beq" || ID_EX_register.opcode == "blt")
+    {
+        // Parse the instruction and extract rs1, rs2, and label
+        ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
+        ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
+        // Extract the immediate value and sign-extend it
+        //ID_EX_register.imm = signExtend(ID_EX_register.imm);
+    }
+    else if (ID_EX_register.opcode == "li")//HERE OR EXECUTE ?
+    {
+        // Parse the instruction and extract rd and imm
+        //ID_EX_register.rd_val = ID_EX_register.imm;
+    }
+
         //..IF_ID_register.clear();
     //}
 }
 
 void Core::pipelineExecute(std::vector<int> &memory) {
-    // if (!ID_EX_register.empty()) {
-        // Execute the instruction (not implemented in this example)
-        EX_MEM_register = ID_EX_register;
-        //ID_EX_register.clear();
-    //}
+    
+    std::string opcode = ID_EX_register.opcode;
+    // Perform execution based on the opcode
+    if (opcode == "addi" || opcode == "srli" || opcode == "slli") {
+        ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.imm;
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    } 
+    else if (opcode == "lw") {
+        // Example execution for lw
+        ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
+        //EX_MEM_register = {instruction[1], std::to_string(data)};
+    }
+     else if (opcode == "sw") {
+        // Example execution for sw
+        ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
+       // Assuming memory is a vector of integers
+        // No need to update EX_MEM_register for store instructions
+    }
+     else if (opcode == "bge" || opcode == "bne" || opcode == "beq" || opcode == "blt") {
+        // Example execution for branch instructions
+        // Assuming branching logic is handled elsewhere
+        // No need to update EX_MEM_register for branch instructions
+    } 
+    else if (opcode == "li") {//should it be done in execute or writeback?
+        // Example execution for li (load immediate)
+        ID_EX_register.rd_val = ID_EX_register.imm; // Load immediate value into instruction's rd (not wriiten back yet)
+        // Update the EX_MEM_register
+        // EX_MEM_register = {instruction[1], std::to_string(rd_val)};
+    } 
+    EX_MEM_register=ID_EX_register;
+    // Clear the ID_EX_register after execution
+    //     ID_EX_register.clear();
+    // }
 }
+
 
 void Core::pipelineMemory(std::vector<int> &memory) {
-    //if (!EX_MEM_register.empty()) {
-        // Access memory if needed (not implemented in this example)
-        MEM_WB_register = EX_MEM_register;
-       // EX_MEM_register.clear();
-   // }
+
+        std::string opcode = EX_MEM_register.opcode;
+        // Check if the instruction is a load (lw) or store (sw)
+        if (opcode == "lw") {
+            // Perform memory read operation for load instruction
+    
+            int data = memory[EX_MEM_register.address]; // Access memory
+            MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
+            MEM_WB_register.rd_val = data; // Update instruction's destination register value
+        } 
+        else if (opcode == "sw") {
+            // Perform memory write operation for store instruction
+            memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
+            MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
+        } else {
+            // For other instructions, simply pass them to the next pipeline stage
+            MEM_WB_register = EX_MEM_register;
+        }
+
+        // Clear the EX_MEM_register as the instruction has been processed
+        //EX_MEM_register.clear();
+    }
+    void Core::pipelineWriteBack() {
+        // Check if the instruction has a destination register
+        if (!MEM_WB_register.rd.empty()) {
+            // Write back the result to the destination register
+            registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
+
+            // Mark the destination register as ready
+            MEM_WB_register.rd_ready = true;
+        }
+
+        // Clear the MEM_WB_register as the instruction has been processed
+        //MEM_WB_register.clear();
+    
 }
 
-// void Core::pipelineWriteBack() {
-//     if (!MEM_WB_register.empty()) {
-//         // Write back the result (not implemented in this example)
-//         MEM_WB_register.clear();
-//     }
-// }
 
 
 
