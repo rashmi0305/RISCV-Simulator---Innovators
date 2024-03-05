@@ -21,6 +21,7 @@ public:
     int rs1_val=0;
     int rs2_val=0;
     int imm=0;
+    int offset=0;
     //int memory_addr=0;
     int latency=1;
     bool rd_ready=false;
@@ -36,6 +37,30 @@ public:
             rs1 = data[2];
             rs2 = data[3];
         }
+         if(opcode=="addi"){
+            rd = data[1];
+            rs1 = data[2];
+            imm = std::stoi(data[3]);
+        }
+        if(opcode=="srli"||"slli"){
+        std::string rd = data[1];
+        std::string rs = data[2];
+        int immediate = std::stoi(data[3]);
+        }
+         if(opcode=="lw"){
+            std::string rd = data[1];
+            std::string memOperand = data[2];
+                        // Parse offset and source register
+            size_t pos = memOperand.find('(');
+            size_t pos1 = memOperand.find(')');
+            if (pos != std::string::npos && pos1 != std::string::npos) {
+                    std::string offsetStr = memOperand.substr(0, pos);
+                    std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
+                    offset = std::stoi(offsetStr);
+                    rs1 =srcReg;
+         }
+
+    }
     }
 
 };
@@ -114,10 +139,9 @@ void Core::pipelineDecode() {
             ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
             ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
         }
-        if(ID_EX_register.opcode=="addi"){
+        if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli"){
             ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
             ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
-            ID_EX_register.imm=getRegister(ID_EX_register.rs2);
         }
         //..IF_ID_register.clear();
     //}
