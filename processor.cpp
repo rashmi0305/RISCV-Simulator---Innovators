@@ -25,6 +25,11 @@ public:
     int address=0;
     int latency=1;
     bool rd_ready=false;
+    int branch_predictions=0;
+    int mispredictions=0;
+    bool mispredicted;
+    std::unordered_map<int, bool> branch_history;
+    //Instruction() : branch_predictions(0), mispredictions(0) {}
     int branch_target=0;
     int pred_target=0;
     bool branch_taken=false;
@@ -78,7 +83,8 @@ public:
         this->pc=pc;
         opcode=data[0];
         if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
-        {
+        { 
+            latency=3;
             rd = data[1];
             rs1 = data[2];
             rs2 = data[3];
@@ -237,11 +243,16 @@ void Core::pipelineFetch() {
                 pc = pc + 1;
    
         }
+
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
         }
-        Instruction inst(program[pc],pc);
+
+        Instruction inst(program[pc], pc);
         IF_ID_register =inst;//check if gets copied entirely-maybe problem
+         if (inst.branch_history.find(pc) != inst.branch_history.end() && inst.branch_history[pc]) {
+            pc = IF_ID_register.pred_taken ? IF_ID_register.pred_target : pc + 1;
+        } 
         pc++;
      }
      // else {
@@ -292,6 +303,7 @@ void Core::pipelineDecode() {
         // Parse the instruction and extract rd and imm
         //ID_EX_register.rd_val = ID_EX_register.imm;
     }
+    ID_EX_register.branch_history[ID_EX_register.pc] = ID_EX_register.branch_taken;
 
         //..IF_ID_register.clear();
     //}
@@ -301,11 +313,83 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     
     std::string opcode = ID_EX_register.opcode;
     // Perform execution based on the opcode
-    if (opcode == "addi" || opcode == "srli" || opcode == "slli") {
+    if (opcode == "addi") {
         ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.imm;
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
+    if (opcode == "add") {
+        ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.rs2_val;
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    } 
+     if (opcode == "sub") {
+        ID_EX_register.rd_val = ID_EX_register.rs1_val - ID_EX_register.rs2_val;
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    } 
+    else if ( opcode == "srli") {
+         ID_EX_register.rd_val=ID_EX_register.rs1_val>>ID_EX_register.imm;
+    } 
+     else if ( opcode == "slli") {
+         ID_EX_register.rd_val=ID_EX_register.rs1_val<<ID_EX_register.imm;
+    } 
+    else if (opcode == "lw") {
+        // Example execution for lw
+        ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
+        //EX_MEM_register = {instruction[1], std::to_string(data)};
+    }
+     else if (opcode == "sw") {
+        // Example execution for sw
+        ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
+
+     }
+      else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
+                int a= ID_EX_register.rs1_val;
+                int b= ID_EX_register.rs2_val;
+               int addr= ID_EX_register.address=labels[ID_EX_register.label+":"];
+                if(a>b||a==b){
+                   pc=addr;
+                }
+                     else{
+                              pc += 1; 
+                         }                     
+      } 
+    else if (opcode == "blt") {
+         int a = ID_EX_register.rs1_val;
+         int b = ID_EX_register.rs2_val;
+         int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
+         if (a < b) {
+             pc = addr ;
+         } else {
+             pc += 1;
+         }
+}
+      else if (opcode == "bne") {
+         int addr= ID_EX_register.address = labels[ID_EX_register.label + ":"];
+         if (ID_EX_register.rs1_val != ID_EX_register.rs2_val) {
+             pc =addr ;
+         } else {
+             pc += 1;
+         }
+     }
+     else if (opcode == "beq") {
+         int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
+         if (ID_EX_register.rs1_val == ID_EX_register.rs2_val) {
+            pc = addr;
+         } else {
+             pc += 1;
+         }
+     }
+
+    else if (opcode == "li") {//should it be done in execute or writeback?
+        // Example execution for li (load immediate)
+        ID_EX_register.rd_val = ID_EX_register.imm; 
+    }
+  else if (opcode == "j") {
+     int addr=ID_EX_register.address = labels[ID_EX_register.label+":"];
+    pc = addr; 
+ } 
     else if (opcode == "lw") {
         // Example execution for lw
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
@@ -317,17 +401,25 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
        // Assuming memory is a vector of integers
         // No need to update EX_MEM_register for store instructions
     }
-     else if (opcode == "bge" || opcode == "bne" || opcode == "beq" || opcode == "blt") {
-        // Example execution for branch instructions
-        // Assuming branching logic is handled elsewhere
-        // No need to update EX_MEM_register for branch instructions
-    } 
-    else if (opcode == "li") {//should it be done in execute or writeback?
-        // Example execution for li (load immediate)
-        ID_EX_register.rd_val = ID_EX_register.imm; // Load immediate value into instruction's rd (not wriiten back yet)
-        // Update the EX_MEM_register
-        // EX_MEM_register = {instruction[1], std::to_string(rd_val)};
-    } 
+    
+    if (ID_EX_register.branch_taken) {
+        // Update branch prediction
+        ID_EX_register.pred_taken = ID_EX_register.branch_taken;
+        ID_EX_register.pred_target = ID_EX_register.branch_target;
+
+        // Check misprediction
+        if (ID_EX_register.branch_taken != ID_EX_register.pred_taken) {
+            ID_EX_register.mispredicted = true;
+            ID_EX_register.mispredictions++;
+        }
+
+        // Check for stalls due to misprediction
+        if (ID_EX_register.mispredicted) {
+            stallCount += ID_EX_register.latency - 1; // Account for pipeline stages
+            pc = ID_EX_register.pred_target;
+        }
+    }
+     
     EX_MEM_register=ID_EX_register;
     // Clear the ID_EX_register after execution
     //     ID_EX_register.clear();
@@ -360,6 +452,7 @@ void Core::pipelineMemory(std::vector<int> &memory) {
     }
     void Core::pipelineWriteBack() {
         // Check if the instruction has a destination register
+         MEM_WB_register = Instruction();
         if (!MEM_WB_register.rd.empty()) {
             // Write back the result to the destination register
             registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
@@ -367,6 +460,16 @@ void Core::pipelineMemory(std::vector<int> &memory) {
             // Mark the destination register as ready
             MEM_WB_register.rd_ready = true;
         }
+        if (MEM_WB_register.branch_taken) {
+        MEM_WB_register.branch_history[MEM_WB_register.pc] = MEM_WB_register.branch_taken;
+    }
+
+    // Check for stalls due to misprediction
+    if (MEM_WB_register.mispredicted) {
+        stallCount += MEM_WB_register.latency - 1; // Account for pipeline stages
+        pc = MEM_WB_register.pred_target;
+    }
+
 
         // Clear the MEM_WB_register as the instruction has been processed
         //MEM_WB_register.clear();
@@ -769,6 +872,7 @@ class Processor {
 public:
     std::vector<int> memory;
     int clock;
+     int stallCount;
     std::vector<Core> cores;
 
 public:
@@ -780,7 +884,7 @@ public:
     const std::vector<int>& getMemoryContents() const;
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
 };
-Processor::Processor() : memory(4096, 0), clock(0), cores(2) {}
+Processor::Processor() : memory(4096, 0), clock(0), cores(2),stallCount(0) {}
 void Processor::run() {
     while (true) {
         bool allCoresCompleted = true;
@@ -790,6 +894,7 @@ void Processor::run() {
                 if (cores[i].pc < cores[i].program.size()) {
                     allCoresCompleted = false;
                 }
+                stallCount += cores[i].stallCount; 
             }
         }
         if (allCoresCompleted) {
@@ -954,6 +1059,10 @@ int main() {
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";
     }
+    std::cout<<std::endl;
+
+// Print stallCount
+    std::cout << "Total Stall Count: " << sim.cores[0].stallCount + sim.cores[1].stallCount << std::endl;
 
     return 0;
 }
