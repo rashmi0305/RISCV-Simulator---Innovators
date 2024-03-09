@@ -1,19 +1,18 @@
 .data
-.word 12 56 1 5 2 22 
+.word 12 56 1 5 2  
 .text
 addi x2,x0,0 
-addi x20,x0,5
+addi x20,x0,4
 Loop:
 addi x3,x0,0 
 addi x4,x0,0
 li x16 ,0
 sub x6,x20,x2
 addi x2,x2,1 
-bne x2,x20,Loop2 
 beq x2,x20,Exit
 Loop2:
-lw x10,0(a6) 
-lw x11,4(a6)
+lw x10,0(x16)    
+lw x11,4(x16)
 addi x16,x16,4 
 addi x3,x3,1 
 blt x11,x10,L1 
@@ -21,8 +20,8 @@ bne x3,x6,Loop2
 beq x4,x0,Exit
 j Loop
 L1: 
-sw x10,0(a6)
-sw x11,-4(a6)
+sw x10,0(x16)
+sw x11,-4(x16)
 addi x4,x4,1
 bne x3,x6,Loop2
 j Loop
@@ -30,7 +29,7 @@ Exit:
 li x16,0
 addi x1,x0,20 
 print_loop:
-lw a1, 0(a6) 
+lw a1, 0(x16) 
 addi a0,a1,0
 li a7, 1
 ecall

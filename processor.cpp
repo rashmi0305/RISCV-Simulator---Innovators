@@ -7,8 +7,10 @@
 #include <map>
 #include<algorithm>
 #include<sstream>
-
+//going only till if/rd of last inst
 class Instruction{
+private:
+    bool cleared=false;
 public:
 
     std::string opcode;
@@ -25,66 +27,42 @@ public:
     int address=0;
     int latency=1;
     bool rd_ready=false;
-    int branch_predictions=0;
-    int mispredictions=0;
-    bool mispredicted;
-    std::unordered_map<int, bool> branch_history;
-    //Instruction() : branch_predictions(0), mispredictions(0) {}
     int branch_target=0;
     int pred_target=0;
-    bool branch_taken=false;
-    bool pred_taken=false;
-    Instruction(){};
-    //  Instruction(const Instruction& other) {
-    //     // Copy primitive data members
-    //     opcode = other.opcode;
-    //     rd = other.rd;
-    //     rs1 = other.rs1;
-    //     rs2 = other.rs2;
-    //     label = other.label;
-    //     pc = other.pc;
-    //     rd_val = other.rd_val;
-    //     rs1_val = other.rs1_val;
-    //     rs2_val = other.rs2_val;
-    //     imm = other.imm;
-    //     address = other.address;
-    //     latency = other.latency;
-    //     rd_ready = other.rd_ready;
-    //     branch_target = other.branch_target;
-    //     pred_target = other.pred_target;
-    //     branch_taken = other.branch_taken;
-    //     pred_taken = other.pred_taken;
-    // }
-    // Instruction& operator=(const Instruction& other) {
-    //     if (this != &other) {
-    //         // Copy primitive data members
-    //         opcode = other.opcode;
-    //         rd = other.rd;
-    //         rs1 = other.rs1;
-    //         rs2 = other.rs2;
-    //         label = other.label;
-    //         pc = other.pc;
-    //         rd_val = other.rd_val;
-    //         rs1_val = other.rs1_val;
-    //         rs2_val = other.rs2_val;
-    //         imm = other.imm;
-    //         address = other.address;
-    //         latency = other.latency;
-    //         rd_ready = other.rd_ready;
-    //         branch_target = other.branch_target;
-    //         pred_target = other.pred_target;
-    //         branch_taken = other.branch_taken;
-    //         pred_taken = other.pred_taken;
-    //     }
-    //     return *this;
-    // }
+    bool branch_taken;
+    bool pred_taken;
+    Instruction() {
+        clear(); // Call clear() in the constructor to ensure initial state
+    }
+
+    // Clear function to reset all member variables
+    void clear() {
+        opcode.clear();
+        rd.clear();
+        rs1.clear();
+        rs2.clear();
+        label.clear();
+        pc = 0;
+        rd_val = 0;
+        rs1_val = 0;
+        rs2_val = 0;
+        imm = 0;
+        address = 0;
+        latency = 1;
+        rd_ready = false;
+        branch_target = 0;
+        pred_target = 0;
+        branch_taken = false;
+        pred_taken = false;
+        cleared=true;
+    }
+    
     Instruction(std::vector<std::string> data,int pc)
     {
         this->pc=pc;
         opcode=data[0];
         if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
-        { 
-            latency=3;
+        {
             rd = data[1];
             rs1 = data[2];
             rs2 = data[3];
@@ -179,15 +157,28 @@ public:
 
 
     }
+    void printInst()
+    {
+        std::cout<<"O"<<opcode<<" "<<"d"<<rd<<" "<<"rs1"<<rs1<<" "<<"rs2"<<rs2<<" "<<"L"<<label<<" "<<"pc"<<pc<<" "<<"rdv"<<rd_val<<" "<<rs1_val<<" "<<rs2_val<<" "<<imm<<" "<<address<<std::endl;
+    }
+    bool empty()
+    {
+        return cleared;
+    }
+    
 
 };
 
-
+bool predictBranch()
+    {
+        return false;
+    }
 
 class Core {
 public:
     std::unordered_map<std::string, int> registers;
     int pc;
+    int stall=0;
     int ticks;
     int cycleCount;
     int stallCount;
@@ -207,6 +198,7 @@ public:
     const std::unordered_map<std::string, int>& getRegisters() const;
     void reset();
     void pipelineFetch();
+    void checkDependency(Instruction curr,Instruction prev,Instruction pprev);
     void pipelineDecode();
     void pipelineExecute(std::vector<int>& memory);
     void pipelineMemory(std::vector<int>& memory);
@@ -229,39 +221,76 @@ void Core::execute(std::vector<int> &memory) {
         pipelineFetch();
 
         // Check if all pipeline stages are clear.
-        if (pc >= program.size()){ //&& IF_ID_register.empty() && ID_EX_register.empty() && EX_MEM_register.empty() && MEM_WB_register.empty()) {
+        if (pc >= program.size() && IF_ID_register.empty() && ID_EX_register.empty() && EX_MEM_register.empty() && MEM_WB_register.empty()) {
             break;
         }
     }
-
     std::cout << "Done." << std::endl;
 }
 
 void Core::pipelineFetch() {
-    if (pc < program.size()) {
+    std::cout<<"stall is"<<stall<<std::endl;
+    if (pc < program.size() && stall==0) {
+        while(true){
         if (program[pc][0] == "#" || program[pc][0].find(".") != std::string::npos) {
                 pc = pc + 1;
    
         }
-
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
         }
-
-        Instruction inst(program[pc], pc);
-        IF_ID_register =inst;//check if gets copied entirely-maybe problem
-         if (inst.branch_history.find(pc) != inst.branch_history.end() && inst.branch_history[pc]) {
-            pc = IF_ID_register.pred_taken ? IF_ID_register.pred_target : pc + 1;
-        } 
-        pc++;
+        else{
+            break;
+        }}
+        if(!IF_ID_register.pred_taken && !EX_MEM_register.branch_taken)//checking for branch prediction and branch misprediction
+        {
+            Instruction inst(program[pc],pc);
+            IF_ID_register =inst;//check if gets copied entirely-maybe problem
+            pc++;
+        }
+        else
+        {
+            IF_ID_register=Instruction();
+            stallCount++;
+        }
+       
+       
      }
-     // else {
-    //     IF_ID_register.clear();
-    // }
+     else if(stall!=0)
+     {
+        stall--;
+     }
+     else {
+        IF_ID_register.clear();
+    }
+    std::cout<<"print if/id";
+    IF_ID_register.printInst();
 }
-
+void Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
+{
+    
+      if (!prev.empty() && (prev.rd == curr.rs1 || prev.rd == curr.rs2)) {
+            stall+=2;
+            stallCount+=2;
+            // Clear the ID_EX_register to indicate the stall
+            // ID_EX_register = Instruction();
+        }
+    else if (!pprev.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {
+            stall+=1;
+            stallCount+=1;
+            // Clear the ID_EX_register to indicate the stall
+            // ID_EX_register = Instruction();
+        }
+   
+    
+}
 void Core::pipelineDecode() {
+    if(!EX_MEM_register.branch_taken){
    // if (!IF_ID_register.empty()) {
+    
+    checkDependency(IF_ID_register,EX_MEM_register,MEM_WB_register);
+    if(stall==0)
+    {
     ID_EX_register = IF_ID_register;
     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
     {
@@ -284,7 +313,7 @@ void Core::pipelineDecode() {
     }
     else if (ID_EX_register.opcode == "sw") 
     {
-        
+        //sw rs2, imm(rs1)
         ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
         ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
         // Extract the immediate value and sign-extend it
@@ -293,6 +322,7 @@ void Core::pipelineDecode() {
     else if (ID_EX_register.opcode == "bge" || ID_EX_register.opcode == "bne" ||ID_EX_register.opcode == "beq" || ID_EX_register.opcode == "blt")
     {
     
+        ID_EX_register.pred_taken=predictBranch();
         ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
         ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
         // Extract the immediate value and sign-extend it
@@ -301,9 +331,16 @@ void Core::pipelineDecode() {
     else if (ID_EX_register.opcode == "li")//HERE OR EXECUTE ?
     {
         // Parse the instruction and extract rd and imm
-        //ID_EX_register.rd_val = ID_EX_register.imm;
+        ID_EX_register.rd_val = ID_EX_register.imm;
     }
-    ID_EX_register.branch_history[ID_EX_register.pc] = ID_EX_register.branch_taken;
+    }
+    }
+    else{
+        ID_EX_register.clear();
+        stallCount++;
+    }
+    std::cout<<"print id/ex";
+    ID_EX_register.printInst();
 
         //..IF_ID_register.clear();
     //}
@@ -344,85 +381,68 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
 
      }
-      else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
+    //  else if (opcode == "bge" || opcode == "bne" || opcode == "beq" || opcode == "blt") {
+    //     // Example execution for branch instructions
+    //     // Assuming branching logic is handled elsewhere
+    //     // No need to update EX_MEM_register for branch instructions
+    // } 
+    // else if (opcode == "li") {//should it be done in execute or writeback?
+    //     // Example execution for li (load immediate)
+    //     ID_EX_register.rd_val = ID_EX_register.imm; // Load immediate value into instruction's rd (not wriiten back yet)
+    //     // Update the EX_MEM_register
+    //     // EX_MEM_register = {instruction[1], std::to_string(rd_val)};
+    // } 
+    else if (opcode == "j") {
+     int addr=ID_EX_register.address = labels[ID_EX_register.label+":"];
+    pc = addr; 
+ }
+       else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
+       
                 int a= ID_EX_register.rs1_val;
                 int b= ID_EX_register.rs2_val;
                int addr= ID_EX_register.address=labels[ID_EX_register.label+":"];
                 if(a>b||a==b){
                    pc=addr;
-                }
-                     else{
-                              pc += 1; 
-                         }                     
+                   IF_ID_register=Instruction();
+                   ID_EX_register.branch_taken=true;
+                }                   
       } 
     else if (opcode == "blt") {
+       
          int a = ID_EX_register.rs1_val;
          int b = ID_EX_register.rs2_val;
          int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
          if (a < b) {
              pc = addr ;
-         } else {
-             pc += 1;
-         }
+             IF_ID_register=Instruction();
+             ID_EX_register.branch_taken=true;
+         } 
 }
       else if (opcode == "bne") {
+       
          int addr= ID_EX_register.address = labels[ID_EX_register.label + ":"];
          if (ID_EX_register.rs1_val != ID_EX_register.rs2_val) {
              pc =addr ;
-         } else {
-             pc += 1;
+             IF_ID_register=Instruction();
+             ID_EX_register.branch_taken=true;
          }
      }
      else if (opcode == "beq") {
+       
          int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
          if (ID_EX_register.rs1_val == ID_EX_register.rs2_val) {
             pc = addr;
-         } else {
-             pc += 1;
-         }
+            IF_ID_register=Instruction();
+            ID_EX_register.branch_taken=true;
+
+         } 
      }
-
-    else if (opcode == "li") {//should it be done in execute or writeback?
-        // Example execution for li (load immediate)
-        ID_EX_register.rd_val = ID_EX_register.imm; 
-    }
-  else if (opcode == "j") {
-     int addr=ID_EX_register.address = labels[ID_EX_register.label+":"];
-    pc = addr; 
- } 
-    else if (opcode == "lw") {
-        // Example execution for lw
-        ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
-        //EX_MEM_register = {instruction[1], std::to_string(data)};
-    }
-     else if (opcode == "sw") {
-        // Example execution for sw
-        ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
-       // Assuming memory is a vector of integers
-        // No need to update EX_MEM_register for store instructions
-    }
-    
-    if (ID_EX_register.branch_taken) {
-        // Update branch prediction
-        ID_EX_register.pred_taken = ID_EX_register.branch_taken;
-        ID_EX_register.pred_target = ID_EX_register.branch_target;
-
-        // Check misprediction
-        if (ID_EX_register.branch_taken != ID_EX_register.pred_taken) {
-            ID_EX_register.mispredicted = true;
-            ID_EX_register.mispredictions++;
-        }
-
-        // Check for stalls due to misprediction
-        if (ID_EX_register.mispredicted) {
-            stallCount += ID_EX_register.latency - 1; // Account for pipeline stages
-            pc = ID_EX_register.pred_target;
-        }
-    }
-     
+// 
     EX_MEM_register=ID_EX_register;
+    std::cout<<"print EX/MEM";
+    EX_MEM_register.printInst();
     // Clear the ID_EX_register after execution
-    //     ID_EX_register.clear();
+        ID_EX_register.clear();
     // }
 }
 
@@ -446,382 +466,30 @@ void Core::pipelineMemory(std::vector<int> &memory) {
             // For other instructions, simply pass them to the next pipeline stage
             MEM_WB_register = EX_MEM_register;
         }
-
+        std::cout<<"print MEM/WB";
+        MEM_WB_register.printInst();
         // Clear the EX_MEM_register as the instruction has been processed
-        //EX_MEM_register.clear();
+        EX_MEM_register.clear();
     }
     void Core::pipelineWriteBack() {
         // Check if the instruction has a destination register
-         MEM_WB_register = Instruction();
+           std::cout<<"hi"<<std::endl;
         if (!MEM_WB_register.rd.empty()) {
             // Write back the result to the destination register
+             std::cout<<MEM_WB_register.rd<<" "<<" VAL IS "<<MEM_WB_register.rd_val<<std::endl;
             registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
-
+             for (const auto& entry : getRegisters()) {
+                std::cout << entry.first << ": " << entry.second<<std::endl;
+        }
             // Mark the destination register as ready
             MEM_WB_register.rd_ready = true;
         }
-        if (MEM_WB_register.branch_taken) {
-        MEM_WB_register.branch_history[MEM_WB_register.pc] = MEM_WB_register.branch_taken;
-    }
-
-    // Check for stalls due to misprediction
-    if (MEM_WB_register.mispredicted) {
-        stallCount += MEM_WB_register.latency - 1; // Account for pipeline stages
-        pc = MEM_WB_register.pred_target;
-    }
-
 
         // Clear the MEM_WB_register as the instruction has been processed
-        //MEM_WB_register.clear();
+        MEM_WB_register.clear();
     
 }
 
-
-
-
-//Core::Core() : registers(), pc(0) {}
-//Core:: Core():program(), labels(), pc(0), registers(), IF_ID_register(), ID_EX_register(), EX_MEM_register(), MEM_WB_register() {}
-// void Core::execute(std::vector<int>& memory) {
-//     //std::cout<<"Hi";
-//        while (pc < program.size()) {
-    
-//             const std::vector<std::string>& instruction = program[pc];
-//             if (instruction[0] == "#" || instruction[0].find(".") != std::string::npos) {
-//                 pc = pc + 1;
-   
-//             }
-//              else if (instruction[0].find(":") != std::string::npos && instruction.size() == 1) {
-//                 pc = pc + 1;
-   
-//             }
-
-//             if (!instruction.empty()) {
-//                 std::string opcode = instruction[0];
-//                 std::cout<<"EXECUTING: "<<opcode<<" ";
-//                 if (opcode == "add") {
-//                     if (instruction.size() == 4) {
-//                         std::string rd = instruction[1];
-//                         std::string rs1 = instruction[2];
-//                         std::string rs2 = instruction[3];
-//                         registers[rd] = registers[rs1] + registers[rs2];
-//                         std::cout << "Register values:" << std::endl;
-//                          for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                         std::cout << std::endl;
-
-
-//                          pc += 1;
-//                         } else {
-//                         std::cerr << "Invalid 'add' instruction format at line " << pc << std::endl;
-//                         // Handle error: Invalid instruction format
-//                     }
-//                  }
-//                  else if (opcode == "lw") {
-//                     if (instruction.size() == 3) {
-//                         std::string rd = instruction[1];
-//                         std::string memOperand = instruction[2];
-//                         // Parse offset and source register
-//                         size_t pos = memOperand.find('(');
-//                         size_t pos1 = memOperand.find(')');
-//                         if (pos != std::string::npos && pos1 != std::string::npos) {
-//                             std::string offsetStr = memOperand.substr(0, pos);
-//                             std::string srcReg = memOperand.substr(pos + 1, pos1 - pos - 1);
-//                             int offset = std::stoi(offsetStr);
-//                             int srcRegValue = getRegister(srcReg);
-//                             int memoryAddress = srcRegValue + offset;
-//                             registers[rd] = memory[memoryAddress];
-//                              for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                         pc += 1;
-//                     } 
-//                     } else {
-//                          std::cerr << "Invalid 'lw' instruction format at line " << pc << std::endl;
-//                          }
-//                  }
-//                  else if (opcode == "bge") {
-//                     if (instruction.size() == 4) {
-//                         std::string rs1 = instruction[1];
-//                         std::string rs2 = instruction[2];
-//                         std::string label = instruction[3];
-//                         int addr = labels[label+":"];
-//                         if (registers[rs1] >= registers[rs2]) {
-//                             pc = addr; 
-//                         }else{
-//                             pc += 1; 
-//                         }
-                       
-//                     } else {
-//                         std::cerr << "Invalid 'bge' instruction format at line " << pc << std::endl;
-                        
-//                     }
-// }
-
-//                  else if (opcode == "srli") {
-//                     if (instruction.size() == 4) {
-//                     std::string rd = instruction[1];
-//                     std::string rs = instruction[2];
-//                     int immediate = std::stoi(instruction[3]);
-//                     if (registers.find(rs) != registers.end()) {
-//                     int rsValue = registers[rs];
-//                     registers[rd] = rsValue >> immediate;
-//                       std::cout << "Register values:" << std::endl;
-//                          for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                     pc += 1;
-//                  } else {
-//                     std::cerr << "Source register " << rs << " not found." << std::endl;
-//                  }
-//                  } else {
-//                      std::cerr << "Invalid 'srl' instruction format at line " << pc << std::endl;
-//                 }
-// }
-//                 else if (opcode == "slli") {
-//                     if (instruction.size() == 4) {
-//                         std::string rd = instruction[1];
-//                         std::string rs = instruction[2];
-//                         int immediate = std::stoi(instruction[3]);
-//                         if (registers.find(rs) != registers.end()) {
-//                             int rsValue = registers[rs];
-//                             registers[rd] = rsValue << immediate;
-//                              for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                             pc += 1;
-//                         } else {
-//                             std::cerr << "Source register " << rs << " not found." << std::endl;
-//                         }
-//                     } else {
-//                         std::cerr << "Invalid 'slli' instruction format at line " << pc << std::endl;
-                       
-//                     }
-//                 }
-//                 else if (opcode == "li") {
-//                     if (instruction.size() == 3) {
-//                         std::string rd = instruction[1];
-//                         int immediate = std::stoi(instruction[2]);
-//                         setRegister(rd, immediate);
-//                         for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                         pc += 1;
-                        
-//                     } else {
-//                         std::cerr << "Invalid 'li' instruction format at line " << pc << std::endl;
-                      
-//                     }
-// }
-//                 else if (opcode == "beq") {
-//                     if (instruction.size() == 4) {
-//                         std::string rs1 = instruction[1];
-//                         std::string rs2 = instruction[2];
-//                         std::string label = instruction[3];
-//                         int addr = labels[label+":"]; 
-//                         if (getRegister(rs1) == getRegister(rs2)) {
-//                             pc = addr; 
-//                         } else {
-//                             pc += 1; 
-//                         }
-                       
-//                     } else {
-//                         std::cerr << "Invalid 'beq' instruction format at line " << pc << std::endl;
-                       
-//                     }
-//                 }
-//                 else if (opcode == "blt") {
-//                     if (instruction.size() == 4) {
-//                         std::string rs1 = instruction[1];
-//                         std::string rs2 = instruction[2];
-//                         std::string label = instruction[3];
-//                         int addr = labels[label+":"];
-//                         if (getRegister(rs1) < getRegister(rs2)) {
-//                             pc = addr; 
-//                         } else {
-//                             pc += 1; 
-//                         }
-                        
-//                     } else {
-//                         std::cerr << "Invalid 'blt' instruction format at line " << pc << std::endl;
-                        
-//                     }
-//                 }
-//                 else if (opcode == "j") {
-//                     if (instruction.size() == 2) {
-//                         std::string label = instruction[1];
-//                         int addr = labels[label+":"];
-//                         std::cout<<"adr"<<addr<<std::endl;
-//                         pc = addr; 
-                       
-//                     } else {
-//                         std::cerr << "Invalid 'j' instruction format at line " << pc << std::endl;
-                       
-//                     }
-// }
-//                 else if (opcode == "bne") {
-//                    if (instruction.size() == 4) {
-//                        std::string rs1 = instruction[1];
-//                        std::string rs2 = instruction[2];
-//                        std::string label = instruction[3];
-//                        if (registers.find(rs1) != registers.end() && registers.find(rs2) != registers.end()) {
-//                            if (registers[rs1] != registers[rs2]) {
-//                                int addr = labels[label+":"]; 
-//                                pc = addr; 
-//                            } else {
-//                                pc += 1; 
-//                            }
-//                        } else {
-//                            std::cerr << "Source register not found in 'bne' instruction at line " << pc << std::endl;
-//                        }
-//                    } else {
-//                        std::cerr << "Invalid 'bne' instruction format at line " << pc << std::endl;
-    
-//                    }
-//                 }
-//                 else if (opcode == "sub") {
-//                     if (instruction.size() == 4) {
-//                         std::string rd = instruction[1];
-//                         std::string rs1 = instruction[2];
-//                         std::string rs2 = instruction[3];
-//                         if (registers.find(rs1) != registers.end() && registers.find(rs2) != registers.end()) {
-//                             registers[rd] = registers[rs1] - registers[rs2];
-//                             std::cout << "Intermediate state:" << std::endl;
-//                             std::cout << "Register values:" << std::endl;
-//                          for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                             pc += 1;
-                           
-//                         } else {
-//                             std::cerr << "Source register not found in 'sub' instruction at line " << pc << std::endl;
-
-//                         }
-//                     } else {
-//                         std::cerr << "Invalid 'sub' instruction format at line " << pc << std::endl;
-
-//                     }
-// }
-
-//                 else if (opcode == "ecall") {
-//                    if (instruction.size() == 1) {
-//                        // Retrieve the system call number from register a7
-//                        int syscall_number = getRegister("a7");
-//                        switch (syscall_number) {
-//                            case 1: // print_int
-//                                std::cout << getRegister("a0") << std::endl;
-//                                break;
-//                            case 4: // print space
-                               
-//                                for (int i = getRegister("a0"); memory[i] != '\0'; ++i) {
-//                                    std::cout << static_cast<char>(memory[i]);
-//                                }
-//                                std::cout << std::endl;
-//                                break;
-
-//                            default:
-//                                std::cerr << "Unsupported system call number: " << syscall_number << std::endl;
-//                                exit(1); // Exit with error code
-//                                break;
-//                        }
-
-
-//                        pc += 1;
-//                    } else {
-//                        std::cerr << "Invalid 'ecall' instruction format at line " << pc << std::endl;
-
-//                    }
-// }
-
-//                  else if (opcode == "addi") {
-//                     if (instruction.size() == 4) {
-//                         std::string rd = instruction[1];
-//                         std::string rs = instruction[2];
-//                         int immediate = std::stoi(instruction[3]);
-//                         if (registers.find(rs) != registers.end()) {
-//                             registers[rd] = registers[rs] + immediate;
-//                              std::cout << "Register values:" << std::endl;
-//                         for (int i = 0; i < 32; ++i) {
-//                             std::string regName = "x" + std::to_string(i);
-//                             std::cout << regName << ": "<< std::right << registers[regName] << "  ";
-//                             if ((i + 1) % 8 == 0) {
-//                                 std::cout << std::endl;
-//                             }
-//                         }
-//                         pc += 1;
-//                     } else {
-//                          std::cerr << "Source register " << rs << " not found." << std::endl;
-//                     }
-//                  } else {
-//                      std::cerr << "Invalid 'addi' instruction format at line " << pc << std::endl;
-                    
-//                  }
-//                 }
-               
-//                 else if (opcode == "sw") {
-//                     if (instruction.size() == 3) {
-//                         std::string srcReg = instruction[1];
-//                         std::string memOperand = instruction[2];
-//                         // Parse offset and destination register
-//                         size_t pos = memOperand.find('(');
-//                         size_t pos1 = memOperand.find(')');
-//                         if (pos != std::string::npos && pos1 != std::string::npos) {
-//                             std::string offsetStr = memOperand.substr(0, pos);
-//                             std::string destReg = memOperand.substr(pos + 1, pos1 - pos - 1);
-//                             int offset = std::stoi(offsetStr);
-//                             if (registers.find(destReg) != registers.end()) {
-//                             int destRegValue = registers[destReg];
-//                             int memoryAddress = destRegValue + offset;
-//                              memory[memoryAddress] = registers[srcReg];
-    
-//                         pc += 1;
-//                 std::cout << "Final state after sw execution(ONLY FEW):" << std::endl;
-//                 for(int i=0;i<55;i++)
-//                             {
-//                                 std::cout<<memory[i]<<" ";
-//                             }
-//                             std::cout<<std::endl;
-//             } else {
-//                 std::cerr << "Destination register " << destReg << " not found." << std::endl;
-//             }
-//         }
-//     } else {
-//         std::cerr << "Invalid 'sw' instruction format at line " << pc << std::endl;
-//         // Handle error: Invalid instruction format
-//     }
-// }
-
-
-// }
-
-//             }
-
-//         }
-    
 
 void Core:: setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProg)
 {
@@ -857,12 +525,13 @@ const std::unordered_map<std::string, int>& Core::getRegisters() const {
 void Core::reset() {
     // Implementation of reset function
      registers = {
-            {"zero", 0}, {"a0", 0}, {"a1", 0},{"a2", 0},{"a3", 0}, {"t0", 0},
-            {"t1", 0}, {"t2", 0}, {"t3", 0}, {"t4", 0}, {"t5", 0}, {"t6", 0},
-            {"s0", 0}, {"s1", 0},{"s2", 0}, {"s3", 0}, {"s4", 0}, {"s5", 0}, 
-            {"s6", 0},{"s7", 0}, {"gp", 0}, {"sp", 0}, {"s8", 0}, {"ra", 0},
-            {"tp",0},{"a4",0},{"a5",0},{"a6",0},{"a7",0},{"s9",0},
-            {"s10",0},{"s11",0}
+             {"x0",0}, {"x1", 0}, {"x2", 0}, {"x3", 0}, {"x4", 0}, {"x5", 0},
+    {"x6", 0}, {"x7", 0}, {"x8", 0}, {"x9", 0}, {"x10", 0},
+    {"x11", 0}, {"x12", 0}, {"x13", 0}, {"x14", 0}, {"x15", 0},
+    {"x16", 0}, {"x17", 0}, {"x18", 0}, {"x19", 0}, {"x20", 0},
+    {"x21", 0}, {"x22", 0}, {"x23", 0}, {"x24", 0}, {"x25", 0},
+    {"x26", 0}, {"x27", 0}, {"x28", 0}, {"x29", 0}, {"x30", 0},
+    {"x31", 0}
         };
 
         std::cout << "Reset processor" << std::endl;
@@ -872,7 +541,6 @@ class Processor {
 public:
     std::vector<int> memory;
     int clock;
-     int stallCount;
     std::vector<Core> cores;
 
 public:
@@ -884,7 +552,7 @@ public:
     const std::vector<int>& getMemoryContents() const;
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
 };
-Processor::Processor() : memory(4096, 0), clock(0), cores(2),stallCount(0) {}
+Processor::Processor() : memory(4096, 0), clock(0), cores(2) {}
 void Processor::run() {
     while (true) {
         bool allCoresCompleted = true;
@@ -894,7 +562,6 @@ void Processor::run() {
                 if (cores[i].pc < cores[i].program.size()) {
                     allCoresCompleted = false;
                 }
-                stallCount += cores[i].stallCount; 
             }
         }
         if (allCoresCompleted) {
@@ -943,12 +610,11 @@ const std::unordered_map<std::string, int>& Processor::getCoreRegisters(int core
 class Parser {
 private:
     int index;
-    std::unordered_map<std::string, std::string> registerAliases = {
-        {"x0","zero"},{"x1", "ra"}, {"x2", "sp"}, {"x3", "gp"}, {"x4", "tp"}, {"x5", "t0"},{"x6", "t1"}, {"x7", "t2"}, {"x8", "s0"}, {"x9", "s1"}, {"x10", "a0"},
-        {"x11", "a1"}, {"x12", "a2"}, {"x13", "a3"}, {"x14", "a4"}, {"x15", "a5"},{"x16", "a6"}, {"x17", "a7"}, {"x18", "s2"}, {"x19", "s3"}, {"x20", "s4"},
-        {"x21", "s5"}, {"x22", "s6"}, {"x23", "s7"}, {"x24", "s8"}, {"x25", "s9"},{"x26", "s10"}, {"x27", "s11"}, {"x28", "t3"}, {"x29", "t4"}, {"x30", "t5"},{"x31","t6"}
-    };
-
+    // std::unordered_map<std::string, std::string> registerAliases = {
+    //     {"x0","zero"},{"x1", "ra"}, {"x2", "sp"}, {"x3", "gp"}, {"x4", "tp"}, {"x5", "t0"},{"x6", "t1"}, {"x7", "t2"}, {"x8", "s0"}, {"x9", "s1"}, {"x10", "a0"},
+    //     {"x11", "a1"}, {"x12", "a2"}, {"x13", "a3"}, {"x14", "a4"}, {"x15", "a5"},{"x16", "a6"}, {"x17", "a7"}, {"x18", "s2"}, {"x19", "s3"}, {"x20", "s4"},
+    //     {"x21", "s5"}, {"x22", "s6"}, {"x23", "s7"}, {"x24", "s8"}, {"x25", "s9"},{"x26", "s10"}, {"x27", "s11"}, {"x28", "t3"}, {"x29", "t4"}, {"x30", "t5"},{"x31","t6"}
+    // };
 public:
     Parser(){index=0;}
     int getIndex()
@@ -978,11 +644,11 @@ public:
             std::stringstream lineStream(line);
             std::string token;
             while (lineStream >> token) {
-                if (registerAliases.find(token) != registerAliases.end()) {
-                    lineArr.push_back(registerAliases[token]);
-                } else {
+                // if (registerAliases.find(token) != registerAliases.end()) {
+                //     lineArr.push_back(registerAliases[token]);
+                // } else {
                     lineArr.push_back(token);
-                }
+                
             }
             lineWiseSplit.push_back(lineArr);
             // for(auto tokens:lineArr)
@@ -1059,13 +725,7 @@ int main() {
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";
     }
-    std::cout<<std::endl;
-
-// Print stallCount
-    std::cout << "Total Stall Count: " << sim.cores[0].stallCount + sim.cores[1].stallCount << std::endl;
+     std::cout << "Total Stall Count: " << sim.cores[0].stallCount+ sim.cores[1].stallCount << std::endl;
 
     return 0;
 }
-
-
-
