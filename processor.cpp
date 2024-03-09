@@ -293,15 +293,27 @@ void Core::pipelineDecode() {
     {
     ID_EX_register = IF_ID_register;
     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
-    {
+    {   
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
         ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+            if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
     }
     if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+            if (ID_EX_register.rd == IF_ID_register.rs1 ) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
     }
     else if (ID_EX_register.opcode == "lw")
     {
@@ -373,12 +385,24 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     } 
     else if (opcode == "lw") {
         // Example execution for lw
+        if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
         //EX_MEM_register = {instruction[1], std::to_string(data)};
     }
      else if (opcode == "sw") {
         // Example execution for sw
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
+         if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
 
      }
     //  else if (opcode == "bge" || opcode == "bne" || opcode == "beq" || opcode == "blt") {
@@ -453,12 +477,14 @@ void Core::pipelineMemory(std::vector<int> &memory) {
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
             // Perform memory read operation for load instruction
+          
     
             int data = memory[EX_MEM_register.address]; // Access memory
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
             MEM_WB_register.rd_val = data; // Update instruction's destination register value
         } 
         else if (opcode == "sw") {
+             
             // Perform memory write operation for store instruction
             memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
             MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
