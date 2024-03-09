@@ -32,8 +32,14 @@ public:
     //Instruction() : branch_predictions(0), mispredictions(0) {}
     int branch_target=0;
     int pred_target=0;
-    bool branch_taken=false;
+    bool branch_taken;
     bool pred_taken=false;
+    bool predictBranch() {
+        // Implement your branch prediction logic here
+        // For simplicity, assume not taken (false) by default
+        branch_taken=false;
+        return branch_history[pc];
+    }
     Instruction(){};
     //  Instruction(const Instruction& other) {
     //     // Copy primitive data members
@@ -264,15 +270,27 @@ void Core::pipelineDecode() {
    // if (!IF_ID_register.empty()) {
     ID_EX_register = IF_ID_register;
     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
-    {
+    {   
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
         ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+            if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
     }
     if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+            if (ID_EX_register.rd == IF_ID_register.rs1 ) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
     }
     else if (ID_EX_register.opcode == "lw")
     {
@@ -303,7 +321,9 @@ void Core::pipelineDecode() {
         // Parse the instruction and extract rd and imm
         //ID_EX_register.rd_val = ID_EX_register.imm;
     }
-    ID_EX_register.branch_history[ID_EX_register.pc] = ID_EX_register.branch_taken;
+ 
+    /////===================================
+    //ID_EX_register.branch_history[ID_EX_register.pc] = ID_EX_register.branch_taken;
 
         //..IF_ID_register.clear();
     //}
@@ -336,15 +356,28 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     } 
     else if (opcode == "lw") {
         // Example execution for lw
+        if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
         //EX_MEM_register = {instruction[1], std::to_string(data)};
     }
      else if (opcode == "sw") {
         // Example execution for sw
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
+         if (ID_EX_register.rd == IF_ID_register.rs1 || ID_EX_register.rd == IF_ID_register.rs2) {
+            stallCount++;
+            // Clear the ID_EX_register to indicate the stall
+            ID_EX_register = Instruction();
+            return;
+        }
 
      }
       else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
+                 ID_EX_register.branch_taken = ID_EX_register.predictBranch();
                 int a= ID_EX_register.rs1_val;
                 int b= ID_EX_register.rs2_val;
                int addr= ID_EX_register.address=labels[ID_EX_register.label+":"];
@@ -356,6 +389,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
                          }                     
       } 
     else if (opcode == "blt") {
+         ID_EX_register.branch_taken = ID_EX_register.predictBranch();
          int a = ID_EX_register.rs1_val;
          int b = ID_EX_register.rs2_val;
          int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
@@ -366,6 +400,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
          }
 }
       else if (opcode == "bne") {
+         ID_EX_register.branch_taken = ID_EX_register.predictBranch();
          int addr= ID_EX_register.address = labels[ID_EX_register.label + ":"];
          if (ID_EX_register.rs1_val != ID_EX_register.rs2_val) {
              pc =addr ;
@@ -374,6 +409,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
          }
      }
      else if (opcode == "beq") {
+         ID_EX_register.branch_taken = ID_EX_register.predictBranch();
          int addr = ID_EX_register.address = labels[ID_EX_register.label + ":"];
          if (ID_EX_register.rs1_val == ID_EX_register.rs2_val) {
             pc = addr;
@@ -390,35 +426,25 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
      int addr=ID_EX_register.address = labels[ID_EX_register.label+":"];
     pc = addr; 
  } 
-    else if (opcode == "lw") {
-        // Example execution for lw
-        ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
-        //EX_MEM_register = {instruction[1], std::to_string(data)};
-    }
-     else if (opcode == "sw") {
-        // Example execution for sw
-        ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
-       // Assuming memory is a vector of integers
-        // No need to update EX_MEM_register for store instructions
-    }
     
-    if (ID_EX_register.branch_taken) {
-        // Update branch prediction
-        ID_EX_register.pred_taken = ID_EX_register.branch_taken;
-        ID_EX_register.pred_target = ID_EX_register.branch_target;
+    
+    // if (ID_EX_register.branch_taken) {
+    //     // Update branch prediction
+    //     ID_EX_register.pred_taken = ID_EX_register.branch_taken;
+    //     ID_EX_register.pred_target = ID_EX_register.branch_target;
 
-        // Check misprediction
-        if (ID_EX_register.branch_taken != ID_EX_register.pred_taken) {
-            ID_EX_register.mispredicted = true;
-            ID_EX_register.mispredictions++;
-        }
+    //     // Check misprediction
+    //     if (ID_EX_register.branch_taken != ID_EX_register.pred_taken) {
+    //         ID_EX_register.mispredicted = true;
+    //         ID_EX_register.mispredictions++;
+    //     }
 
-        // Check for stalls due to misprediction
-        if (ID_EX_register.mispredicted) {
-            stallCount += ID_EX_register.latency - 1; // Account for pipeline stages
-            pc = ID_EX_register.pred_target;
-        }
-    }
+    //     // Check for stalls due to misprediction
+    //     if (ID_EX_register.mispredicted) {
+    //         stallCount += ID_EX_register.latency - 1; // Account for pipeline stages
+    //         pc = ID_EX_register.pred_target;
+    //     }
+    // }
      
     EX_MEM_register=ID_EX_register;
     // Clear the ID_EX_register after execution
@@ -433,12 +459,14 @@ void Core::pipelineMemory(std::vector<int> &memory) {
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
             // Perform memory read operation for load instruction
+          
     
             int data = memory[EX_MEM_register.address]; // Access memory
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
             MEM_WB_register.rd_val = data; // Update instruction's destination register value
         } 
         else if (opcode == "sw") {
+             
             // Perform memory write operation for store instruction
             memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
             MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
@@ -452,14 +480,22 @@ void Core::pipelineMemory(std::vector<int> &memory) {
     }
     void Core::pipelineWriteBack() {
         // Check if the instruction has a destination register
-         MEM_WB_register = Instruction();
-        if (!MEM_WB_register.rd.empty()) {
+        MEM_WB_register = Instruction();
+        
+
+             if (ID_EX_register.rs1 == MEM_WB_register.rd) {
+            // Hazard: Data dependency on the result of the previous instruction.
+            // You may need to stall or insert a bubble in the pipeline.
+            stallCount++;
+             }
+            //return;
+    
             // Write back the result to the destination register
             registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
 
             // Mark the destination register as ready
             MEM_WB_register.rd_ready = true;
-        }
+        
         if (MEM_WB_register.branch_taken) {
         MEM_WB_register.branch_history[MEM_WB_register.pc] = MEM_WB_register.branch_taken;
     }
