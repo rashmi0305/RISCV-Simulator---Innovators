@@ -1,7 +1,7 @@
 .data
 arr1: .word 1,16,2,8,156,34,72
 .text
-        li x3,20
+        li x3,80
         addi x5, x0, 0
         addi x19, x0, 6
         addi x18, x0, 6

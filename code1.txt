@@ -1,15 +1,15 @@
 .data
-.word 12 56 1 5 2  
+.word 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1
 .text
 addi x2,x0,0 
-addi x20,x0,4
+addi x20,x0,19
 Loop:
+beq x2,x20,Exit
 addi x3,x0,0 
 addi x4,x0,0
 li x16 ,0
 sub x6,x20,x2
 addi x2,x2,1 
-beq x2,x20,Exit
 Loop2:
 lw x10,0(x16)    
 lw x11,4(x16)
@@ -27,14 +27,3 @@ bne x3,x6,Loop2
 j Loop
 Exit:
 li x16,0
-addi x1,x0,20 
-print_loop:
-lw a1, 0(x16) 
-addi a0,a1,0
-li a7, 1
-ecall
-li a7 4
-ecall
-addi x16, x16, 4
-addi x1, x1, -1 
-bne x1,x0, print_loop
