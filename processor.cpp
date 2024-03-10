@@ -178,8 +178,11 @@ class Core {
 public:
     std::unordered_map<std::string, int> registers;
     int pc;
+    bool stall1=0;
+    bool stall2=0;
     int stall=0;
     int ticks;
+    bool dataforwarding;
     int cycleCount;
     int stallCount;
     std::vector<std::vector<std::string>> program;
@@ -198,8 +201,9 @@ public:
     const std::unordered_map<std::string, int>& getRegisters() const;
     void reset();
     void pipelineFetch();
-    void checkDependency(Instruction curr,Instruction prev,Instruction pprev);
+    bool checkDependency(Instruction curr,Instruction prev,Instruction pprev);
     void pipelineDecode();
+    void decode_forwarding();
     void pipelineExecute(std::vector<int>& memory);
     void pipelineMemory(std::vector<int>& memory);
     void pipelineWriteBack();
@@ -266,26 +270,47 @@ void Core::pipelineFetch() {
     std::cout<<"print if/id";
     IF_ID_register.printInst();
 }
-void Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
-{
+bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
+{   //if(!dataforwarding){
     if(stall==0 )
     {
+        if(prev.opcode=="lw" && dataforwarding && prev.rs1==curr.rd)//-down dep-prev done
+    {
+        stall++;
+        stall1=true;
+        stallCount++;
+    }
     
-      if (!prev.rd.empty() && (prev.rd == curr.rs1 || prev.rd == curr.rs2)) {
-        std::cout<<"enter 2"<<std::endl;
+      else if (!prev.rd.empty() && (prev.rd == curr.rs1 || prev.rd == curr.rs2)) {   //up for previous-done
+        if(dataforwarding){
+        return  true;
+       }
+        else
+        {
+       // std::cout<<"enter 2"<<std::endl;
             stall+=2;
             stallCount+=2;
-            // Clear the ID_EX_register to indicate the stall
-            // ID_EX_register = Instruction();
         }
-    else if (!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {
+
+      }
+      else if(pprev.opcode=="lw" && dataforwarding && pprev.rs1==curr.rd)//-down dep-pprev done
+    {
+        stall++;
+        stallCount++;
+    }
+    else if (!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {//up dependency for prev prev-done
             stall+=1;
             stallCount+=1;
             std::cout<<"enter 1"<<std::endl;
             // Clear the ID_EX_register to indicate the stall
             // ID_EX_register = Instruction();
-        }
+        
     }
+    
+   
+    //}
+}
+  return false; 
     
 }
 void Core::pipelineDecode() {
@@ -295,8 +320,12 @@ void Core::pipelineDecode() {
     {
         stall--;
     }
-    checkDependency(IF_ID_register,EX_MEM_register,MEM_WB_register);
-    if(stall==0)
+    bool flag=checkDependency(IF_ID_register,EX_MEM_register,MEM_WB_register);
+    if(stall!=0 && stall1)
+    {
+
+    }
+    else if(stall==0)
     {
     
     ID_EX_register = IF_ID_register;
@@ -353,22 +382,50 @@ void Core::pipelineDecode() {
     pc = addr; 
     IF_ID_register.clear();
     stallCount++;
+
  }
     }
+    if(stall1 && stall==0){ 
+        if(MEM_WB_register.rd == ID_EX_register.rs1){
+
+        ID_EX_register.rs1_val=MEM_WB_register.rd_val;
+        }
+        else if(MEM_WB_register.rd == ID_EX_register.rs2)
+        {
+            ID_EX_register.rs2_val=MEM_WB_register.rd_val;
+        }
+        stall1=false;
     }
-    else{
+    else if(flag && !stall1){//not lw and sw
+        if(EX_MEM_register.rd == ID_EX_register.rs1)
+        {
+            ID_EX_register.rs1_val=EX_MEM_register.rd_val;
+        }
+        else if(EX_MEM_register.rd == ID_EX_register.rs2)
+        {
+            ID_EX_register.rs2_val=EX_MEM_register.rd_val;
+        }
+
+    }
+    
+   
+}
+else{
         ID_EX_register.clear();
         stallCount++;
     }
-    std::cout<<"print id/ex";
+     std::cout<<"print id/ex";
     ID_EX_register.printInst();
     //IF_ID_register.clear();
     //}
 }
 
 void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency here
-    
-    std::string opcode = ID_EX_register.opcode;
+    if(stall1){ 
+        EX_MEM_register=Instruction();
+    }
+    else
+{    std::string opcode = ID_EX_register.opcode;
     // Perform execution based on the opcode
     if (opcode == "addi") {
         ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.imm;
@@ -403,17 +460,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
 
      }
-    //  else if (opcode == "bge" || opcode == "bne" || opcode == "beq" || opcode == "blt") {
-    //     // Example execution for branch instructions
-    //     // Assuming branching logic is handled elsewhere
-    //     // No need to update EX_MEM_register for branch instructions
-    // } 
-    // else if (opcode == "li") {//should it be done in execute or writeback?
-    //     // Example execution for li (load immediate)
-    //     ID_EX_register.rd_val = ID_EX_register.imm; // Load immediate value into instruction's rd (not wriiten back yet)
-    //     // Update the EX_MEM_register
-    //     // EX_MEM_register = {instruction[1], std::to_string(rd_val)};
-    // } 
+    
     
        else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
        
@@ -459,10 +506,11 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
      }
 // 
     EX_MEM_register=ID_EX_register;
+}
     std::cout<<"print EX/MEM";
     EX_MEM_register.printInst();
     // Clear the ID_EX_register after execution
-        ID_EX_register.clear();
+        ID_EX_register.clear();//CHECKKK====================
 
     // }
 }
@@ -715,14 +763,26 @@ public:
     }
 };
 int main() {
-    
-    Processor sim;
+       Processor sim;
     Parser parser;
     auto parsedProgram1 = parser.parseFromFile("code1.txt",sim.memory); // Parse the program from a file
     auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
-
+    for(int j=0;j<=1;j++)
+    {
+    std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
+    int i;
+    std::cin>>i;
+    if(i==1)
+    {
+        sim.cores[j].dataforwarding=true;
+    }
+    else
+    {
+        sim.cores[j].dataforwarding=false;
+    }
+    }
     for (auto& core : sim.cores) {
         core.reset();
     }
