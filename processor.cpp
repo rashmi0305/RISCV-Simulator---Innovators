@@ -23,9 +23,8 @@ public:
     int rs1_val=0;
     int rs2_val=0;
     int imm=0;
-    //int offset=0;
-    int address=0;
     int latency=1;
+    int address=0;
     bool rd_ready=false;
     int branch_target=0;
     int pred_target=0;
@@ -42,13 +41,13 @@ public:
         rs1.clear();
         rs2.clear();
         label.clear();
+        latency=1;
         pc = 0;
         rd_val = 0;
         rs1_val = 0;
         rs2_val = 0;
         imm = 0;
         address = 0;
-        latency = 1;
         rd_ready = false;
         branch_target = 0;
         pred_target = 0;
@@ -57,10 +56,11 @@ public:
         cleared=true;
     }
     
-    Instruction(std::vector<std::string> data,int pc)
+    Instruction(std::vector<std::string> data,int pc,std::unordered_map<std::string, int> instLatencies)
     {
         this->pc=pc;
         opcode=data[0];
+        latency=instLatencies[opcode];
         if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
         {
             rd = data[1];
@@ -179,14 +179,15 @@ public:
     std::unordered_map<std::string, int> registers;
     int pc;
     bool stall1=0;
-    bool stall2=0;
     int stall=0;
-    int ticks;
+    int numInst=0;
+    int cycles;
     bool dataforwarding;
-    int cycleCount;
+    bool initLat=false;
     int stallCount;
     std::vector<std::vector<std::string>> program;
     std::map<std::string, int> labels;
+    std::unordered_map<std::string, int> instLatencies;
     Instruction IF_ID_register;//to store the instructions temporarily in between stages
     Instruction ID_EX_register;
     Instruction EX_MEM_register;
@@ -214,9 +215,8 @@ void Core::execute(std::vector<int> &memory) {
     std::cout << "Start running ..." << std::endl;
     
     while (true) {
-        // Increment clock ticks.
-        ticks++;
-
+        // Increment clock cycles.
+        cycles++;
         // Process pipeline stages backwards.
         pipelineWriteBack();
         pipelineMemory(memory);
@@ -238,17 +238,22 @@ void Core::pipelineFetch() {
         while(true){
         if (program[pc][0] == "#" || program[pc][0].find(".") != std::string::npos) {
                 pc = pc + 1;
+                numInst++;
+                cycles++;
    
         }
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
+            numInst++;
+            cycles++;
+
         }
         else{
             break;
         }}
         if(!IF_ID_register.pred_taken && !EX_MEM_register.branch_taken)//checking for branch prediction and branch misprediction
         {
-            Instruction inst(program[pc],pc);
+            Instruction inst(program[pc],pc,instLatencies);
             IF_ID_register =inst;
             pc++;
         }
@@ -274,7 +279,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
 {   //if(!dataforwarding){
     if(stall==0 )
     {
-        if(prev.opcode=="lw" && dataforwarding && prev.rs1==curr.rd)//-down dep-prev done
+        if(prev.opcode=="lw" && dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
     {
         stall++;
         stall1=true;
@@ -283,6 +288,11 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
     
       else if (!prev.rd.empty() && (prev.rd == curr.rs1 || prev.rd == curr.rs2)) {   //up for previous-done
         if(dataforwarding){
+        if(!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2))
+        {
+            stall+=1;
+            stallCount+=1;
+        }
         return  true;
        }
         else
@@ -293,7 +303,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         }
 
       }
-      else if(pprev.opcode=="lw" && dataforwarding && pprev.rs1==curr.rd)//-down dep-pprev done
+      else if(pprev.opcode=="lw" && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
     {
         stall++;
         stallCount++;
@@ -301,7 +311,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
     else if (!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {//up dependency for prev prev-done
             stall+=1;
             stallCount+=1;
-            std::cout<<"enter 1"<<std::endl;
+            // std::cout<<"enter 1"<<std::endl;
             // Clear the ID_EX_register to indicate the stall
             // ID_EX_register = Instruction();
         
@@ -314,12 +324,22 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
     
 }
 void Core::pipelineDecode() {
+    
     if(!EX_MEM_register.branch_taken){
-   // if (!IF_ID_register.empty()) {
+    if(EX_MEM_register.empty())
+    {
+        
+    }
+    else if(initLat==false && EX_MEM_register.latency!=1){
+    initLat=true;
+    stall+=EX_MEM_register.latency;
+    stallCount+=EX_MEM_register.latency-1;}
     if(stall!=0)
     {
         stall--;
     }
+   // if (!IF_ID_register.empty()) {
+    if(stall==0){
     bool flag=checkDependency(IF_ID_register,EX_MEM_register,MEM_WB_register);
     if(stall!=0 && stall1)
     {
@@ -406,8 +426,7 @@ void Core::pipelineDecode() {
             ID_EX_register.rs2_val=EX_MEM_register.rd_val;
         }
 
-    }
-    
+    }}
    
 }
 else{
@@ -417,7 +436,8 @@ else{
      std::cout<<"print id/ex";
     ID_EX_register.printInst();
     //IF_ID_register.clear();
-    //}
+    
+
 }
 
 void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency here
@@ -425,7 +445,13 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         EX_MEM_register=Instruction();
     }
     else
-{    std::string opcode = ID_EX_register.opcode;
+{
+     std::string opcode = ID_EX_register.opcode;
+     if(ID_EX_register.latency>1)
+     {
+        ID_EX_register.latency--;
+     }
+     else{
     // Perform execution based on the opcode
     if (opcode == "addi") {
         ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.imm;
@@ -507,10 +533,15 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
 // 
     EX_MEM_register=ID_EX_register;
 }
+}
     std::cout<<"print EX/MEM";
     EX_MEM_register.printInst();
     // Clear the ID_EX_register after execution
+   
+
         ID_EX_register.clear();//CHECKKK====================
+    
+    
 
     // }
 }
@@ -547,6 +578,7 @@ void Core::pipelineMemory(std::vector<int> &memory) {
             // Write back the result to the destination register
              std::cout<<MEM_WB_register.rd<<" "<<" VAL IS "<<MEM_WB_register.rd_val<<std::endl;
             registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
+            numInst++;
              for (const auto& entry : getRegisters()) {
                 std::cout << entry.first << ": " << entry.second<<std::endl;
         }  
@@ -769,20 +801,28 @@ int main() {
     auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
-    for(int j=0;j<=1;j++)
-    {
-    std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
-    int i;
-    std::cin>>i;
-    if(i==1)
-    {
-        sim.cores[j].dataforwarding=true;
-    }
-    else
-    {
-        sim.cores[j].dataforwarding=false;
-    }
-    }
+    // for(int j=0;j<=1;j++)
+    // {
+    // std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
+    // int i=1;
+    // //std::cin>>i;
+    // if(i==1)
+    // {
+    //     sim.cores[j].dataforwarding=true;
+    // }
+    // else
+    // {
+    //     sim.cores[j].dataforwarding=false;
+    // }
+    //
+    sim.cores[0].dataforwarding=true;
+    sim.cores[1].dataforwarding=true;
+    std::unordered_map<std::string, int> instLatencies= {
+        {"add",1}, {"sub", 1}, {"addi" ,1},{"srli",1},{"slli",1},{"li",1},
+        {"bge",1},{"bne",1},{"blt",1},{"bgt",1},{"lw",1},{"sw",1},{"beq",1}
+    };
+    sim.cores[0].instLatencies=instLatencies;
+    sim.cores[1].instLatencies=instLatencies;
     for (auto& core : sim.cores) {
         core.reset();
     }
@@ -809,7 +849,14 @@ int main() {
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";
     }
-     std::cout << "Total Stall Count: " << sim.cores[0].stallCount<<std::endl; //+ sim.cores[1].stallCount << std::endl;
-
+     std::cout << "Total Stall Count core 1: " << sim.cores[0].stallCount<<std::endl; 
+     std::cout << "Total Instruction Count core 1: " << sim.cores[0].numInst<<std::endl; 
+     std::cout << "Total Clock Cycles core 1: " << sim.cores[0].cycles<<std::endl; 
+     std::cout<<"IPC C1:"<<((double)sim.cores[0].numInst)/sim.cores[0].cycles<<std::endl;
+     std::cout<<"--------------------------------------------------------------"<<std::endl;
+     std::cout << "Total Stall Count core 2:"<<sim.cores[1].stallCount << std::endl;
+     std::cout << "Total Instruction Count core 2: " << sim.cores[1].numInst<<std::endl; 
+     std::cout << "Total Clock Cycles core 2: " << sim.cores[1].cycles<<std::endl; 
+     std::cout<<"IPC C2:"<<((double)sim.cores[1].numInst)/sim.cores[1].cycles<<std::endl;
     return 0;
 }
