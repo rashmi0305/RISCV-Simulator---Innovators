@@ -1,0 +1,47 @@
+WHAT WE HAVE SUCCESSFULLY IMPLEMENTED:
+->PIPELINE AND DATA FORWARDING(BOTH ENABLED AND DISABLED):
+  The simulator has been enhanced to incorporate pipelining with 5 stages (IF,ID,EXE,MEM,WB) with the added functionality to  enable and disable data forwarding.
+  We have added an Instruction class to ease this process and in stage the instruction is passed from previous register.
+
+1.Instruction Fetch (IF):
+   - In this stage, the processor fetches the instruction using program[pc]The fetched instruction is then passed to the next stage. The PC is incremented to point to the next instruction.
+
+2. Instruction Decode (ID)
+   - The fetched instruction is decoded in this stage. The processor determines the type of instruction, identifies the operands, and prepares for the execution stage. Register values are read from the register file during this stage.
+
+3. Execution (EX) Stage:
+   - The actual computation  specified by the instruction takes place in this stage. For arithmetic and logic instructions, this is where the calculations occur. For control flow instructions, the branch conditions are evaluated here.
+
+4. Memory Access (MEM) Stage:
+   - If the instruction involves a memory operation, such as a load or store, it is performed in this stage. Data is read from or written to the memory..
+
+5. Write Back (WB) Stage:
+   - The final results of the instruction are written back to the register file in this stage. 
+Both with forwarding and without forwarding have been implemented and both the bubble asort and seelction sort are giving correct results.
+
+->BRANCH PREDICTION:
+Branch Prediction has been implemented, we chose branch prediction as "always not taken" And code is able to handle mispredictions 
+
+->HANDLING MISPREDICTIONS:
+In case of misprediction we are updating pc value to address and we are flushing instructions fetched and incrementing stall count.
+
+->STALLS AND IPC:
+At end of execution we are able to calculate stall count for each core individually.
+Stalls are generated due to datadependency which leads to hazards like RAW(read after write) WAR(write after read) WAW(write after write) and due to
+branch mispredictions.
+We are able to calculate IPC value for each core by calculating respective total no.of instructions and total number of cycles.  
+
+->LATENCIES( Without data dependency):
+We were able to implement the variable latencies for arithmetic instructions when there is no  data dependency for that instruction. 
+We only decreased the latency value till it reached 1 in execution stage if the latency was more than 1.If it is 1,only then the execution stage is impelmented.
+Till then we increased stalls by latency-1 in decode stage of next instruction.
+
+->WHAT WE COULD NOT IMPLEMENT:
+Latency with data dependency:
+We could not get correct output for the instructions with data dependency and multiple latency.Our idea was to first implement stalls for multiple latency till it becomes 1 
+and then check data dependency with the previous register.However the instruction in previous register is getting cleared by the time stalls are implemented for latency to become 1.
+
+Other than latency with dependency ,we have implemented all other requirements for this phase.
+
+
+
