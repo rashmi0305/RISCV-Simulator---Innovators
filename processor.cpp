@@ -801,22 +801,19 @@ int main() {
     auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
-    // for(int j=0;j<=1;j++)
-    // {
-    // std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
-    // int i=1;
-    // //std::cin>>i;
-    // if(i==1)
-    // {
-    //     sim.cores[j].dataforwarding=true;
-    // }
-    // else
-    // {
-    //     sim.cores[j].dataforwarding=false;
-    // }
-    //
-    sim.cores[0].dataforwarding=true;
-    sim.cores[1].dataforwarding=true;
+     for(int j=0;j<=1;j++){
+     std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
+     int i=1;
+    std::cin>>i;
+     if(i==1){
+         sim.cores[j].dataforwarding=true;
+     }
+     else{
+         sim.cores[j].dataforwarding=false;
+     }
+      }
+    // sim.cores[0].dataforwarding=true;
+    // sim.cores[1].dataforwarding=true;
     std::unordered_map<std::string, int> instLatencies= {
         {"add",1}, {"sub", 1}, {"addi" ,1},{"srli",1},{"slli",1},{"li",1},
         {"bge",1},{"bne",1},{"blt",1},{"bgt",1},{"lw",1},{"sw",1},{"beq",1}
