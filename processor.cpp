@@ -7,7 +7,6 @@
 #include <map>
 #include<algorithm>
 #include<sstream>
-//going only till if/rd of last inst
 class Instruction{
 private:
     bool cleared=false;
@@ -217,7 +216,6 @@ void Core::execute(std::vector<int> &memory) {
     while (true) {
         // Increment clock cycles.
         cycles++;
-        // Process pipeline stages backwards.
         pipelineWriteBack();
         pipelineMemory(memory);
         pipelineExecute(memory);
@@ -311,9 +309,6 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
     else if (!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {//up dependency for prev prev-done
             stall+=1;
             stallCount+=1;
-            // std::cout<<"enter 1"<<std::endl;
-            // Clear the ID_EX_register to indicate the stall
-            // ID_EX_register = Instruction();
         
     }
     
@@ -368,12 +363,7 @@ void Core::pipelineDecode() {
     // Extract the immediate value and sign-extend it if it is in binary,not now
     //ID_EX_register.imm = signExtend(ID_EX_register.imm);
     }
-//          else if (ID_EX_register.opcode == "j") {
-//      int addr=ID_EX_register.address = labels[ID_EX_register.label+":"];
-//     pc = addr; 
-//     // IF_ID_register.clear();
-//     // stallCount++;
-//  }
+
     else if (ID_EX_register.opcode == "sw") 
     {
         //sw rs2, imm(rs1)
@@ -539,7 +529,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     // Clear the ID_EX_register after execution
    
 
-        ID_EX_register.clear();//CHECKKK====================
+        ID_EX_register.clear();
     
     
 
@@ -589,7 +579,7 @@ void Core::pipelineMemory(std::vector<int> &memory) {
 
 
        
-        // Clear the MEM_WB_register as the instruction has been processed
+       
         MEM_WB_register.clear();
     
 }
@@ -714,11 +704,7 @@ const std::unordered_map<std::string, int>& Processor::getCoreRegisters(int core
 class Parser {
 private:
     int index;
-    // std::unordered_map<std::string, std::string> registerAliases = {
-    //     {"x0","zero"},{"x1", "ra"}, {"x2", "sp"}, {"x3", "gp"}, {"x4", "tp"}, {"x5", "t0"},{"x6", "t1"}, {"x7", "t2"}, {"x8", "s0"}, {"x9", "s1"}, {"x10", "a0"},
-    //     {"x11", "a1"}, {"x12", "a2"}, {"x13", "a3"}, {"x14", "a4"}, {"x15", "a5"},{"x16", "a6"}, {"x17", "a7"}, {"x18", "s2"}, {"x19", "s3"}, {"x20", "s4"},
-    //     {"x21", "s5"}, {"x22", "s6"}, {"x23", "s7"}, {"x24", "s8"}, {"x25", "s9"},{"x26", "s10"}, {"x27", "s11"}, {"x28", "t3"}, {"x29", "t4"}, {"x30", "t5"},{"x31","t6"}
-    // };
+    
 public:
     Parser(){index=0;}
     int getIndex()
@@ -755,10 +741,7 @@ public:
                 
             }
             lineWiseSplit.push_back(lineArr);
-            // for(auto tokens:lineArr)
-            // {
-            //     std::cout<<tokens<<std::endl;
-            // }
+    
             
         }
         
@@ -812,8 +795,7 @@ int main() {
          sim.cores[j].dataforwarding=false;
      }
       }
-    // sim.cores[0].dataforwarding=true;
-    // sim.cores[1].dataforwarding=true;
+  
     std::unordered_map<std::string, int> instLatencies= {
         {"add",1}, {"sub", 1}, {"addi" ,1},{"srli",1},{"slli",1},{"li",1},
         {"bge",1},{"bne",1},{"blt",1},{"bgt",1},{"lw",1},{"sw",1},{"beq",1}
