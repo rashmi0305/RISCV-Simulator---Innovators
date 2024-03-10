@@ -2,10 +2,40 @@
 # CO project
 
     MinutesofMeetings:
+    Date: 10-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Updated code for with forwarding and Latency
+            2.Total number of stalls and cycles for each core added
+            3.Ipc for each core and number of Instructions added
+    =========================================================
+    MinutesofMeetings:
+    Date: 09-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Updated code for without forwarding
+            2.Discussion for Data with forwarding
+    =========================================================
+    MinutesofMeetings:
+    Date: 07-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Discussion for data dependency and forwarding
+            2.Discussion for Data with forwarding
+    =========================================================
+    MinutesofMeetings:
+    Date: 06-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Updated branch prediction 
+    =========================================================
+    MinutesofMeetings:
+    Date: 04-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Discussion and implemented pipeline stages
+    =========================================================        
+    MinutesofMeetings:
     Date: 01-Mar-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Understood how to implement data dependency,latency
+    Minutes:1.Discussed how to implement data dependency,latency
             2.Decided to restructure code to write Instruction class
+            3.Discussed about empty function for instruction
     ======================================================================================
     MinutesofMeetings:
     Date: 25-Feb-2024
