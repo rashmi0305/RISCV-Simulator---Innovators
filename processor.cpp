@@ -9,7 +9,7 @@
 #include<sstream>
 class Instruction{
 private:
-    bool cleared=false;
+    bool cleared=false;//checks if instruction is empty/has been cleared
 public:
 
     std::string opcode;
@@ -28,7 +28,7 @@ public:
     int branch_target=0;
     int pred_target=0;
     bool branch_taken;
-    bool pred_taken;
+    bool pred_taken; //prediction-for now always false
     Instruction() {
         clear(); // Call clear() in the constructor to ensure initial state
     }
@@ -156,7 +156,7 @@ public:
 
 
     }
-    void printInst()
+    void printInst()//printing instructions to check if correctly flowing through pipeline
     {
         std::cout<<"O"<<opcode<<" "<<"d"<<rd<<" "<<"rs1"<<rs1<<" "<<"rs2"<<rs2<<" "<<"L"<<label<<" "<<"pc"<<pc<<" "<<"rdv"<<rd_val<<" "<<rs1_val<<" "<<rs2_val<<" "<<imm<<" "<<address<<std::endl;
     }
@@ -177,12 +177,12 @@ class Core {
 public:
     std::unordered_map<std::string, int> registers;
     int pc;
-    bool stall1=0;
+    bool stall1=0; //stall in case of load word
     int stall=0;
     int numInst=0;
     int cycles;
     bool dataforwarding;
-    bool initLat=false;
+    bool initLat=false; 
     int stallCount;
     std::vector<std::vector<std::string>> program;
     std::map<std::string, int> labels;
@@ -248,7 +248,8 @@ void Core::pipelineFetch() {
         }
         else{
             break;
-        }}
+         }
+        }
         if(!IF_ID_register.pred_taken && !EX_MEM_register.branch_taken)//checking for branch prediction and branch misprediction
         {
             Instruction inst(program[pc],pc,instLatencies);
@@ -265,7 +266,7 @@ void Core::pipelineFetch() {
      else if(stall!=0)
      {
         // stall--;
-        std::cout<<"Stall l"<<stall<<std::endl;
+        std::cout<<"Stall l"<<stall<<std::endl;//checking that no instruction fetched
      }
      else {
         IF_ID_register.clear();
@@ -295,7 +296,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
        }
         else
         {
-       // std::cout<<"enter 2"<<std::endl;
+
             stall+=2;
             stallCount+=2;
         }
@@ -395,7 +396,7 @@ void Core::pipelineDecode() {
 
  }
     }
-    if(stall1 && stall==0){ 
+    if(stall1 && stall==0){ //forwarding from mem stage
         if(MEM_WB_register.rd == ID_EX_register.rs1){
 
         ID_EX_register.rs1_val=MEM_WB_register.rd_val;
@@ -457,7 +458,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     else if (opcode == "sub") {
         ID_EX_register.rd_val = ID_EX_register.rs1_val - ID_EX_register.rs2_val;
         // Update the EX_MEM_register
-       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+       
     } 
     else if ( opcode == "srli") {
          ID_EX_register.rd_val=ID_EX_register.rs1_val>>ID_EX_register.imm;
@@ -468,7 +469,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
     else if (opcode == "lw") {
         // Example execution for lw
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
-        //EX_MEM_register = {instruction[1], std::to_string(data)};
+
     }
     
      else if (opcode == "sw") {
@@ -478,7 +479,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
      }
     
     
-       else if (opcode == "bge") {//|| opcode == "bne" || opcode == "beq" || opcode == "blt") {
+       else if (opcode == "bge") {
        
                 int a= ID_EX_register.rs1_val;
                 int b= ID_EX_register.rs2_val;
