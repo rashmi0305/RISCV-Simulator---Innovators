@@ -180,10 +180,10 @@ public:
     bool stall1=0; //stall in case of load word
     int stall=0;
     int numInst=0;
-    int cycles;
+    int cycles=0;
     bool dataforwarding;
     bool initLat=false; 
-    int stallCount;
+    int stallCount=0;
     std::vector<std::vector<std::string>> program;
     std::map<std::string, int> labels;
     std::unordered_map<std::string, int> instLatencies;
@@ -237,13 +237,13 @@ void Core::pipelineFetch() {
         if (program[pc][0] == "#" || program[pc][0].find(".") != std::string::npos) {
                 pc = pc + 1;
                 numInst++;
-                cycles++;
+                //cycles++;
    
         }
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
             numInst++;
-            cycles++;
+            //cycles++;
 
         }
         else{
