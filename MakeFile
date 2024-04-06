@@ -1,0 +1,5 @@
+#To run files in terminal --Follow below commands
+git clone https://github.com/rashmi0305/RISCV-Simulator---Innovators.git
+cd RISCV-Simulator---Innovators
+g++ -o processor processor.cpp
+./processor
