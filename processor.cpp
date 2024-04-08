@@ -197,6 +197,22 @@ private:
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
+std::pair<int,int> splitAddress(int address) {
+    int num_bits_offset = static_cast<int>(std::log2(blockSize));
+        std::cout<<num_bits_offset<<std::endl;
+        address >>= num_bits_offset;
+        int num_bits=static_cast<int>(std::log2(numSets));
+        int index = address & ((1 << num_bits - 1));
+        int num_bits_index =static_cast<int> (std::log2(index));
+        int tag = address >>(num_bits);
+        std::cout<<"Address:"<<address<<std::endl;//for checking values
+        std::cout<<"num bits Offset:"<<num_bits_offset<<std::endl;
+        std::cout<<"tag:"<<tag<<std::endl;
+        std::cout<<"index"<<index<<std::endl;
+
+    return std::make_pair(tag, index);
+}
+
 
 public:
      CacheSimulator(){}
@@ -229,8 +245,85 @@ double getMissRate()  {
         }
     return static_cast<double>(cacheMisses) / totalAccesses; // Miss rate is 1 - hit rate
     }
- 
+
+    bool access(int address) {
+        std::cout<<"init address"<<address<<std::endl;
+        int max=0;
+        int max_block_tag=-1;
+        std::pair<int,int> a=splitAddress(address);
+        // int num_bits_offset = static_cast<int>(std::log2(blockSize));
+        // std::cout<<num_bits_offset<<std::endl;
+        // address >>= num_bits_offset;
+        // int num_bits=static_cast<int>(std::log2(numSets));
+        // int index = address & ((1 << num_bits - 1));
+        // int num_bits_index =static_cast<int> (std::log2(index));
+        // int tag = address >>(num_bits);
+        // std::cout<<"Address:"<<address<<std::endl;;
+        // std::cout<<"num bits Offset:"<<num_bits_offset<<std::endl;
+        // std::cout<<"tag:"<<tag<<std::endl;
+        // std::cout<<"index"<<index<<std::endl;
+        int tag=a.first;
+        int index=a.second;
+        for (int i=0;i<numBlocksPerSet;i++) {
+            
+        
+            if (cache[index][i].valid==true && cache[index][i].tag ==tag ) {
+                for(auto & c:cache[index] )
+                    if(c.tag!=cache[index][i].tag && c.valid==true)
+                    {
+                        //check this logic**
+                        c.priority++;//MRU will have least number for priority variable and lru will have the highest number.
+                        if(c.priority>max)
+                        {
+                            max=c.priority;
+                            max_block_tag=c.tag;//this is to be replaced if miss occurs
+                        }
+                        // Cache hit
+                    }
+                        cacheHits++;
+                        return true;
+                    
+                }
+        }
+            cacheMisses++;
+             for (int i=0;i<numBlocksPerSet;i++) {
+            //CacheBlock block =cache[index][i];//checks if set is not full ,directly adds block
+            std::cout<<cache[index][i].valid;
+            if(cache[index][i].valid==false)
+            {
+                cache[index][i].tag=tag;
+                cache[index][i].valid=true;
+                return false;
+            }
+         }
+        //LRU
+        if(choice==1)
+        {
+        // Cache miss, replace the least recently used block in the set
+        for(int i=0;i<numBlocksPerSet;i++)
+        {
+            if(cache[index][i].tag==max_block_tag)
+            {
+                cache[index][i].tag=tag;
+                cache[index][i].valid= true;
+            }
+        }
+        
+        }
+        else
+        {//Random
+        int lowerLimit=0;
+        int upperLimit=numBlocksPerSet-1;// Generate a random number within the range [lowerLimit, upperLimit]
+        int random=lowerLimit + rand() % (upperLimit - lowerLimit + 1);
+        cache[index][random].tag=tag;
+        cache[index][random].valid=true;
+        }
+        return false;
+    }
 };
+
+ 
+
 class Core {
 private:
     std::unordered_map<std::string, int> registers;
@@ -329,6 +422,18 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
 
         }
         else{
+           
+            int n = pc+4000;
+            // std::string add = std::bitset<32>(n).to_string();
+            bool isHit=cache.access(n);
+            if(isHit!=true)
+            {
+
+                cycles+=2;//main mem access time-change yo dynamic later change to add miss time
+            }
+            else {
+                //add hit time here(for latency)
+            }
             break;
          }
         }
@@ -621,14 +726,12 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
         std::string opcode = EX_MEM_register.opcode;
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
-
             // Perform memory read operation for load instruction
-            ///Have to write access function
-          // bool isHit=cache.access( EX_MEM_register.address);
-            // if(isHit==false)
-            // {
-            //     cycles+=2;//change later based on miss time
-            // }
+            bool isHit=cache.access( EX_MEM_register.address);
+            if(isHit==false)
+            {
+                cycles+=2;//change later based on miss time
+            }
             int data = memory[EX_MEM_register.address]; // Access memory
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
             MEM_WB_register.rd_val = data; // Update instruction's destination register value
@@ -868,8 +971,8 @@ int main() {
        Processor sim;
     Parser parser;
     
-    auto parsedProgram1 = parser.parseFromFile("code11.txt",sim.memory); // Parse the program from a file
-    auto parsedProgram2 = parser.parseFromFile("code12.txt",sim.memory);//2nd file
+    auto parsedProgram1 = parser.parseFromFile("code1.txt",sim.memory); // Parse the program from a file
+    auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
     //code for parsing cache
