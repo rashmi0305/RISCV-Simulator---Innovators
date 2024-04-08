@@ -249,19 +249,8 @@ double getMissRate()  {
     bool access(int address) {
         std::cout<<"init address"<<address<<std::endl;
         int max=0;
-        int max_block_tag=-1;
+        int max_block_tag=-1;//to keep track of lru block
         std::pair<int,int> a=splitAddress(address);
-        // int num_bits_offset = static_cast<int>(std::log2(blockSize));
-        // std::cout<<num_bits_offset<<std::endl;
-        // address >>= num_bits_offset;
-        // int num_bits=static_cast<int>(std::log2(numSets));
-        // int index = address & ((1 << num_bits - 1));
-        // int num_bits_index =static_cast<int> (std::log2(index));
-        // int tag = address >>(num_bits);
-        // std::cout<<"Address:"<<address<<std::endl;;
-        // std::cout<<"num bits Offset:"<<num_bits_offset<<std::endl;
-        // std::cout<<"tag:"<<tag<<std::endl;
-        // std::cout<<"index"<<index<<std::endl;
         int tag=a.first;
         int index=a.second;
         for (int i=0;i<numBlocksPerSet;i++) {
@@ -287,7 +276,7 @@ double getMissRate()  {
         }
             cacheMisses++;
              for (int i=0;i<numBlocksPerSet;i++) {
-            //CacheBlock block =cache[index][i];//checks if set is not full ,directly adds block
+            //checks if set is not full ,directly adds block
             std::cout<<cache[index][i].valid;
             if(cache[index][i].valid==false)
             {
@@ -311,7 +300,7 @@ double getMissRate()  {
         
         }
         else
-        {//Random
+        {//Random-(update policy if possible)
         int lowerLimit=0;
         int upperLimit=numBlocksPerSet-1;// Generate a random number within the range [lowerLimit, upperLimit]
         int random=lowerLimit + rand() % (upperLimit - lowerLimit + 1);
@@ -333,8 +322,6 @@ private:
     int cycles=0;
     bool initLat=false; 
     int stallCount=0;
-   
-    //int acesses=0;
   
     std::map<std::string, int> labels;
     
@@ -429,10 +416,10 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
             if(isHit!=true)
             {
 
-                cycles+=2;//main mem access time-change yo dynamic later change to add miss time
+                cycles+=2;//main mem access time-change to dynamic later change to add miss time
             }
             else {
-                //add hit time here(for latency)
+                //add hit time here?(for latency)
             }
             break;
          }
@@ -998,15 +985,13 @@ int main() {
         }
 
         
-        sim.setCache(cache_size, block_size, set_ass, rep_policy);
+        sim.setCache(cache_size, block_size, set_ass, rep_policy);//should also take main mem access time(update it)
     }
 
     
     file.close();
     std::cout<<cache_size<<" "<<block_size<<" "<< set_ass<<" "<< rep_policy;
     sim.setCache(cache_size , block_size, set_ass,rep_policy);
-
-    //sim.setCache(64,8,8,1);
      for(int j=0;j<=1;j++){
      std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
      int i=1;
