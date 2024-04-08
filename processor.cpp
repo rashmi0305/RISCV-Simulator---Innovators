@@ -6,7 +6,10 @@
 #include<iomanip>
 #include <map>
 #include<algorithm>
+#include <bitset>
+#include<math.h>
 #include<sstream>
+#include<random>
 class Instruction{
 private:
     bool cleared=false;//checks if instruction is empty/has been cleared
@@ -172,78 +175,157 @@ bool predictBranch()
     {
         return false;
     }
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <cassert>
 
-class Core {
+struct CacheBlock {
+    int tag;
+    bool valid;
+    int priority;
+};
+
+class CacheSimulator {
+private:
+
+    std::vector<std::vector<CacheBlock>> cache; // 2D vector representing sets and blocks
+    int cacheSize=0;
+    int choice=0;//LRU or Random
+    int blockSize=0;
+    int numSets=0;
+    int numBlocksPerSet=0;//set associativity
+    double cacheHits=0;
+    double cacheMisses=0;
+
 public:
+     CacheSimulator(){}
+    void setCache  (int _cacheSize, int _blockSize, int _associativity,int _choice)
+        {
+         cacheSize=_cacheSize; 
+         blockSize=_blockSize;
+        assert(cacheSize % blockSize == 0);
+        choice=_choice;
+        numBlocksPerSet = _associativity;
+        numSets = cacheSize / (blockSize * numBlocksPerSet);
+        cache.resize(numSets, std::vector<CacheBlock>(numBlocksPerSet));
+        for (auto& set : cache) {
+            for (auto& block : set) {
+                block.valid = false;
+            }
+        }
+    }
+    double getHitRate(){
+        int totalAccesses = cacheHits + cacheMisses;
+        if (totalAccesses == 0) {
+            return 0.0; // Avoid division by zero
+        }
+        return static_cast<double>(cacheHits) / totalAccesses;
+    }
+double getMissRate()  {
+    int totalAccesses = cacheHits + cacheMisses;
+     if (totalAccesses == 0) {
+            return 0.0; // Avoid division by zero
+        }
+    return static_cast<double>(cacheMisses) / totalAccesses; // Miss rate is 1 - hit rate
+    }
+ 
+};
+class Core {
+private:
     std::unordered_map<std::string, int> registers;
-    int pc;
     bool stall1=0; //stall in case of load word
     int stall=0;
     int numInst=0;
     int cycles=0;
-    bool dataforwarding;
     bool initLat=false; 
     int stallCount=0;
-    std::vector<std::vector<std::string>> program;
+   
+    //int acesses=0;
+  
     std::map<std::string, int> labels;
-    std::unordered_map<std::string, int> instLatencies;
+    
     Instruction IF_ID_register;//to store the instructions temporarily in between stages
     Instruction ID_EX_register;
     Instruction EX_MEM_register;
     Instruction MEM_WB_register;        
-
-
+ public:
+    int pc;
+    bool dataforwarding;
+    std::unordered_map<std::string, int> instLatencies;
+    std::vector<std::vector<std::string>> program;
     Core():program(), labels(), pc(0), registers(), IF_ID_register(), ID_EX_register(), EX_MEM_register(), MEM_WB_register() {}
-    void execute(std::vector<int>& memory);
+    void execute(std::vector<int>& memory,CacheSimulator &cache);
     int getRegister(const std::string& reg);
     void setRegister(std::string reg, int num);
     void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
     void reset();
-    void pipelineFetch();
+    void pipelineFetch(std::vector<int>& memory,CacheSimulator &cache);
     bool checkDependency(Instruction curr,Instruction prev,Instruction pprev);
     void pipelineDecode();
-    void decode_forwarding();
+    //void decode_forwarding();
     void pipelineExecute(std::vector<int>& memory);
-    void pipelineMemory(std::vector<int>& memory);
+    void pipelineMemory(std::vector<int>& memory,CacheSimulator &cache);
     void pipelineWriteBack();
+    void print();
+
+        
+     
 };
 
+void Core::print()
+{
+    std::cout << "Total Stall Count core : " <<stallCount<<std::endl; 
+     std::cout << "Total Instruction Count core: " <<numInst<<std::endl; 
+     std::cout << "Total Clock Cycles core : " <<cycles<<std::endl; 
+     std::cout<<"IPC:"<<(double)numInst/cycles<<std::endl;
+     std::cout<<"--------------------------------------------------------------"<<std::endl;
+     
+}
 
-void Core::execute(std::vector<int> &memory) {
+void Core::execute(std::vector<int> &memory,CacheSimulator &cache) {
     std::cout << "Start running ..." << std::endl;
     
     while (true) {
         // Increment clock cycles.
-        cycles++;
-        pipelineWriteBack();
-        pipelineMemory(memory);
-        pipelineExecute(memory);
-        pipelineDecode();
-        pipelineFetch();
-
+        
+        this->pipelineWriteBack();
+       
+        this->pipelineMemory(memory,cache);
+        
+        this->pipelineExecute(memory);
+        
+        this->pipelineDecode();
+       
+        this->pipelineFetch(memory,cache);
+        
         // Check if all pipeline stages are clear.
         if (pc >= program.size() && IF_ID_register.empty() && ID_EX_register.empty() && EX_MEM_register.empty() && MEM_WB_register.empty()) {
             break;
         }
+        cycles++;
     }
     std::cout << "Done." << std::endl;
 }
-
-void Core::pipelineFetch() {
+// unsigned int binary_to_uint(std:: string b)
+// {
+    
+// }
+void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
     std::cout<<"stalcount is"<<stallCount<<std::endl;
     if (pc < program.size() && stall==0) {
         while(true){
         if (program[pc][0] == "#" || program[pc][0].find(".") != std::string::npos) {
                 pc = pc + 1;
-                numInst++;
-                //cycles++;
+                // numInst++;
+                // cycles++;
    
         }
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
-            numInst++;
-            //cycles++;
+            // numInst++;
+            // cycles++;
 
         }
         else{
@@ -272,7 +354,7 @@ void Core::pipelineFetch() {
         IF_ID_register.clear();
     }
     std::cout<<"print if/id";
-    IF_ID_register.printInst();
+    this->IF_ID_register.printInst();
 }
 bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
 {   //if(!dataforwarding){
@@ -361,8 +443,6 @@ void Core::pipelineDecode() {
     // Parse the instruction and extract rd, imm, and rs1
     ID_EX_register.rd_val = getRegister(ID_EX_register.rd);
     ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
-    // Extract the immediate value and sign-extend it if it is in binary,not now
-    //ID_EX_register.imm = signExtend(ID_EX_register.imm);
     }
 
     else if (ID_EX_register.opcode == "sw") 
@@ -370,8 +450,6 @@ void Core::pipelineDecode() {
         //sw rs2, imm(rs1)
         ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
         ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
-        // Extract the immediate value and sign-extend it
-       // ID_EX_register.imm = signExtend(ID_EX_register.imm);
     }
 
     else if (ID_EX_register.opcode == "bge" || ID_EX_register.opcode == "bne" ||ID_EX_register.opcode == "beq" || ID_EX_register.opcode == "blt")
@@ -467,13 +545,13 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
          ID_EX_register.rd_val=ID_EX_register.rs1_val<<ID_EX_register.imm;
     } 
     else if (opcode == "lw") {
-        // Example execution for lw
+       
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
 
     }
     
      else if (opcode == "sw") {
-        // Example execution for sw
+     
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
 
      }
@@ -538,18 +616,24 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
 }
 
 
-void Core::pipelineMemory(std::vector<int> &memory) {
+void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
 
         std::string opcode = EX_MEM_register.opcode;
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
+
             // Perform memory read operation for load instruction
-    
+            ///Have to write access function
+          // bool isHit=cache.access( EX_MEM_register.address);
+            // if(isHit==false)
+            // {
+            //     cycles+=2;//change later based on miss time
+            // }
             int data = memory[EX_MEM_register.address]; // Access memory
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
             MEM_WB_register.rd_val = data; // Update instruction's destination register value
         } 
-        else if (opcode == "sw") {
+        else if (opcode == "sw") {//we have assumed cpu doesnt wait until entire write is complemeted,(waits only till written in some intermediate buffer)
             // Perform memory write operation for store instruction
             memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
             MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
@@ -564,7 +648,7 @@ void Core::pipelineMemory(std::vector<int> &memory) {
     }
     void Core::pipelineWriteBack() {
         // Check if the instruction has a destination register
-           std::cout<<"hi"<<std::endl;
+         
         if (!MEM_WB_register.rd.empty()) {
             // Write back the result to the destination register
              std::cout<<MEM_WB_register.rd<<" "<<" VAL IS "<<MEM_WB_register.rd_val<<std::endl;
@@ -577,10 +661,6 @@ void Core::pipelineMemory(std::vector<int> &memory) {
             // Mark the destination register as ready
             MEM_WB_register.rd_ready = true;
         }
-
-
-       
-       
         MEM_WB_register.clear();
     
 }
@@ -633,6 +713,8 @@ void Core::reset() {
 }
 
 class Processor {
+    public:
+        CacheSimulator cache;
 public:
     std::vector<int> memory;
     int clock;
@@ -641,19 +723,25 @@ public:
 public:
     Processor();
     void run();
+    void setCache(int cache_size,int block_size,int set_ass,int rep_policy);
     void setInitialMemory(int wordAddress, int value);
     void setMemory(int wordAddress, int value);
     int getMemory(int wordAddress);
     const std::vector<int>& getMemoryContents() const;
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
 };
-Processor::Processor() : memory(4096, 0), clock(0), cores(2) {}
+Processor::Processor() : memory(4096, 0), clock(0), cores(2),cache() {}
+void Processor::setCache(int cache_size,int block_size,int set_ass,int rep_policy)
+{
+    cache.setCache(cache_size,block_size,set_ass,rep_policy);
+}
+
 void Processor::run() {
     while (true) {
         bool allCoresCompleted = true;
         for (int i = 0; i < cores.size(); ++i) {
             if (cores[i].pc < cores[i].program.size()) {
-                cores[i].execute(memory);
+                cores[i].execute(memory,cache);
                 if (cores[i].pc < cores[i].program.size()) {
                     allCoresCompleted = false;
                 }
@@ -735,9 +823,7 @@ public:
             std::stringstream lineStream(line);
             std::string token;
             while (lineStream >> token) {
-                // if (registerAliases.find(token) != registerAliases.end()) {
-                //     lineArr.push_back(registerAliases[token]);
-                // } else {
+               
                     lineArr.push_back(token);
                 
             }
@@ -759,32 +845,65 @@ public:
                 for (size_t j = 1; j < line.size(); ++j, index += 4) {
                     int value = std::stoi(line[j]);
                     memory[index] = value;
-                    //processor.setInitialMemory(index, value);
+
                 }
-                //  std::cout << "Core 0 Memory:" << std::endl;
-                // for (const auto& entry : processor.getMemoryContents()) {
-                //     std::cout << entry<<" ";
-                // }
                 
             } else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".word") {
                 for (size_t j = 1; j < lineWiseSplit[i].size(); ++j, index += 4) {
                     int value = std::stoi(lineWiseSplit[i][j]);
                     memory[index] = value;
-                    //processor.setInitialMemory(index, value);
                 }
             }
         }
         std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram = std::make_pair(lineWiseSplit, labels);
+        int a=(int)lineWiseSplit.size();
+        for(int i=0;i<a;i++)
+        {
+            memory[4000+i]=i;
+        }
         return parsedProgram;
     }
 };
 int main() {
        Processor sim;
     Parser parser;
-    auto parsedProgram1 = parser.parseFromFile("code1.txt",sim.memory); // Parse the program from a file
-    auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
+    
+    auto parsedProgram1 = parser.parseFromFile("code11.txt",sim.memory); // Parse the program from a file
+    auto parsedProgram2 = parser.parseFromFile("code12.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
+    //code for parsing cache
+
+    std::ifstream file("cache_params.txt");
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file." << std::endl;
+        return 1;
+    }
+
+    uint64_t cache_size, block_size, set_ass;
+    int rep_policy;
+
+  
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+
+        if (!(iss >> cache_size >> block_size >> set_ass >> rep_policy)) {
+            std::cerr << "Error: Invalid input format." << std::endl;
+            return 1;
+        }
+
+        
+        sim.setCache(cache_size, block_size, set_ass, rep_policy);
+    }
+
+    
+    file.close();
+    std::cout<<cache_size<<" "<<block_size<<" "<< set_ass<<" "<< rep_policy;
+    sim.setCache(cache_size , block_size, set_ass,rep_policy);
+
+    //sim.setCache(64,8,8,1);
      for(int j=0;j<=1;j++){
      std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
      int i=1;
@@ -829,14 +948,10 @@ int main() {
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";
     }
-     std::cout << "Total Stall Count core 1: " << sim.cores[0].stallCount<<std::endl; 
-     std::cout << "Total Instruction Count core 1: " << sim.cores[0].numInst<<std::endl; 
-     std::cout << "Total Clock Cycles core 1: " << sim.cores[0].cycles<<std::endl; 
-     std::cout<<"IPC C1:"<<((double)sim.cores[0].numInst)/sim.cores[0].cycles<<std::endl;
-     std::cout<<"--------------------------------------------------------------"<<std::endl;
-     std::cout << "Total Stall Count core 2:"<<sim.cores[1].stallCount << std::endl;
-     std::cout << "Total Instruction Count core 2: " << sim.cores[1].numInst<<std::endl; 
-     std::cout << "Total Clock Cycles core 2: " << sim.cores[1].cycles<<std::endl; 
-     std::cout<<"IPC C2:"<<((double)sim.cores[1].numInst)/sim.cores[1].cycles<<std::endl;
+    sim.cores[0].print();
+    sim.cores[1].print();
+    std::cout<<" Hit rate  "<<sim.cache.getHitRate()<<std::endl;
+    std::cout<<" Miss rate  "<<sim.cache.getMissRate()<<std::endl;
+
     return 0;
 }
