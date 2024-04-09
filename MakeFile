@@ -1,5 +1,24 @@
 #To run files in terminal --Follow below commands
-git clone https://github.com/rashmi0305/RISCV-Simulator---Innovators.git
-cd RISCV-Simulator---Innovators
-g++ -o processor processor.cpp
-./processor
+# git clone https://github.com/rashmi0305/RISCV-Simulator---Innovators.git
+# cd RISCV-Simulator---Innovators
+# g++ -o processor processor.cpp
+# ./processor
+CC = g++
+CFLAGS = -std=c++11 -Wall
+
+SRCS = processor.cpp
+OBJS = $(SRCS:.cpp=.o)
+EXEC = simulator
+
+.PHONY: all clean
+
+all: $(EXEC)
+
+$(EXEC): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(EXEC)
+
+.cpp.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(EXEC)
