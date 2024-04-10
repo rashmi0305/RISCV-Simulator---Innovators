@@ -1,0 +1,16 @@
+#### What we have Successfully Implemented
+In this phase of development, we have extended the functionality of our simulator to incorporate cache.
+The implementation includes features such as cache size, block size, associativity, cache replacement policies (LRU, LFU, Random), and access latency of the cache.
+Memory access within the simulator now first searches for the address in the cache. If the data is found in the cache (cache hit), it is accessed directly from the cache.
+If not (cache miss), the data is fetched from the main memory.cache parameters including cache size, block size, associativity, and access latency through input files 
+Cache Replacement Policies: The simulator supports three cache replacement policies:
+LRU (Least Recently Used): Replaces the least recently used cache block when the cache is full.
+LFU (Least Frequently Used): Replaces the least frequently used cache block when the cache is full.
+Random: Replaces a randomly selected cache block when the cache is full.
+The input also includes the main memory access time, which is used to calculate the overall access latency for cache misses.The implemented cache acts as a shared cache, meaning that both 
+cores of the simulator access the same cache.
+ An instruction fetch is considered a memory access. If the instruction is found in the cache, it is fetched from the cache. Otherwise, it is fetched from the main memory by taking extra cycles
+#### What we have not Implimented
+In the extension of our simulator to incorporate cache, we have not implemented variable latency for memory instructions (loads and stores) and the instruction fetch (IF) stage. 
+As we didnt get success in encountering penalty of cycles during latency we are not able to hold the instruction until latency becomes zero in pipeline the instruction is getting flushed and empty
+instruction is getting passed to next stage instead of correct instruction beacause of thiss we are not able to implement latency
