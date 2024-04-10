@@ -132,7 +132,12 @@ To build and run the program, follow these steps:
 -----
                 
 ## Questions we had in initial stages:
-    
+### Phase -3
+    What to take Cache Data datastructure
+    How to put both instructions and data in same cache
+    Should we store data, or should store only tag and index bits
+    How to do execution based on variable latency
+    Which replacement policy is better other than LRU
 ### Phase -2
     How to check data dependency
     How to calculate IPC 
