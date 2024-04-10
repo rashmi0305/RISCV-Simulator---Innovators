@@ -1,4 +1,4 @@
-#To run files in terminal --Follow below commands
+#To run files in terminal without make --Follow below commands
 # git clone https://github.com/rashmi0305/RISCV-Simulator---Innovators.git
 # cd RISCV-Simulator---Innovators
 # g++ -o processor processor.cpp
@@ -8,7 +8,7 @@ CFLAGS = -std=c++11 -Wall
 
 SRCS = processor.cpp
 OBJS = $(SRCS:.cpp=.o)
-EXEC = simulator
+EXEC = processor
 
 .PHONY: all clean
 
