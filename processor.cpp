@@ -180,6 +180,112 @@ bool predictBranch()
 #include <cmath>
 #include <cassert>
 
+class LRUCache {
+    struct Node {
+        int key;
+        Node* prev;
+        Node* next;
+        
+        Node(int k) : key(k), prev(nullptr), next(nullptr) {}
+    };
+
+    int capacity;//=block size initialise
+    std::vector<Node*> sets;//head of each linked list (representing each set).
+    std::vector<Node*> tails;//tail of each linked list (representing each set).
+
+public:
+    LRUCache(){}
+    void set(int _capacity, int _numSets) { capacity=_capacity; sets.resize(_numSets,nullptr); tails.resize(_numSets, nullptr); }
+
+    void put(int key, int setNum) {
+        if (setNum < 0 || setNum >= sets.size())
+            return; // Invalid set number
+        
+        Node* node = findNode(sets[setNum], key);
+        if (node) {
+            if (node == sets[setNum])
+            return;
+            removeNode(node,setNum);//hit so delete it here and move to mru
+        } else {//miss
+            if (size(sets[setNum]) >= capacity)//to be replaced
+                removeTail(setNum);//remove lru
+            node = new Node(key);//create new node for current block to be added
+        }
+        addToHead(node, setNum);
+    }
+
+private:
+    Node* findNode(Node* head, int key) const {
+        Node* curr = head;
+        while (curr) {
+            if (curr->key == key)
+                return curr;
+            curr = curr->next;
+        }
+        return nullptr;
+    }
+
+
+    void removeNode(Node* node,int setNum) {
+    if (node->prev)
+        node->prev->next = node->next;
+    else {
+        // If node is the head node
+        sets[setNum] = node->next;
+        if (node->next)
+            node->next->prev = nullptr;
+        else
+            tails[setNum] = nullptr;
+    }
+    if (node->next)
+        node->next->prev = node->prev;
+    else {
+        // If node is the tail node
+        tails[node->key] = node->prev;
+        if (node->prev)
+            node->prev->next = nullptr;
+        else
+            sets[setNum] = nullptr;
+    }
+
+    delete node;
+}
+
+    void addToHead(Node* node, int setNum) {
+        node->next = sets[setNum];
+        node->prev = nullptr;
+        if (sets[setNum])//when already head initialised
+            sets[setNum]->prev = node;
+        sets[setNum] = node;
+        if (!tails[setNum])
+            tails[setNum] = sets[setNum];
+    }
+
+    void removeTail(int setNum) {
+        if (!tails[setNum])
+            return;
+
+        Node* tailNode = tails[setNum];
+        if (tailNode->prev)
+            tailNode->prev->next = nullptr;
+        else
+            sets[setNum] = nullptr;
+
+        tails[setNum] = tailNode->prev;
+        delete tailNode;
+    }
+
+    int size(Node* head) const {
+        int count = 0;
+        Node* curr = head;
+        while (curr) {
+            ++count;
+            curr = curr->next;
+        }
+        return count;
+    }
+};
+
 struct CacheBlock {
     int tag;
     bool valid;
@@ -197,7 +303,8 @@ private:
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
-    int memacess;
+    int memacess=0;
+    LRUCache lru_cache;
 std::pair<int,int> splitAddress(int address) {
     int num_bits_offset = static_cast<int>(std::log2(blockSize));
         std::cout<<num_bits_offset<<std::endl;
@@ -226,6 +333,9 @@ public:
         choice=_choice;
         numBlocksPerSet = _associativity;
         numSets = cacheSize / (blockSize * numBlocksPerSet);
+        if(choice==1)
+            lru_cache.set(blockSize,numSets);//initialize only if selected lru..
+
         cache.resize(numSets, std::vector<CacheBlock>(numBlocksPerSet));
         for (auto& set : cache) {
             for (auto& block : set) {
@@ -248,13 +358,13 @@ double getMissRate()  {
     return static_cast<double>(cacheMisses) / totalAccesses; // Miss rate is 1 - hit rate
     }
 double getAcessRate(){
-    return cacheHits+(getMissRate()* memacess);
+    return 1+(getMissRate()* memacess);
 }
 
     bool access(int address) {
         std::cout<<"init address"<<address<<std::endl;
         int max=0;
-        int max_block_tag=-1;//to keep track of lru block
+        int max_block_tag=-1;//to keep track of lfu block
         std::pair<int,int> a=splitAddress(address);
         int tag=a.first;
         int index=a.second;
@@ -266,7 +376,7 @@ double getAcessRate(){
                     if(c.tag!=cache[index][i].tag && c.valid==true)
                     {
                         //check this logic**
-                        c.priority++;//MRU will have least number for priority variable and lru will have the highest number.
+                        c.priority++;//MfU will have least number for priority variable and lfu will have the highest number.
                         if(c.priority>max)
                         {
                             max=c.priority;
@@ -275,6 +385,7 @@ double getAcessRate(){
                         // Cache hit
                     }
                         cacheHits++;
+                        lru_cache.put(tag,index);
                         return true;
                     
                 }
@@ -290,12 +401,16 @@ double getAcessRate(){
                 return false;
             }
          }
-        //LRU
-        if(choice==1)
+         if(choice==1)
+         {
+            lru_cache.put(tag,index);//inside this function it checks within the linked list and updates necessraily.
+         }
+        //LFU
+        if(choice==2)
         {
-            std::cout<<"using lru:";
+            std::cout<<"using lfu:";
             std::cout<<max_block_tag<<std::endl;
-        // Cache miss, replace the least recently used block in the set
+        // Cache miss, replace the least frequently used block in the set
         for(int i=0;i<numBlocksPerSet;i++)
         {
             if(cache[index][i].tag==max_block_tag)
@@ -330,7 +445,7 @@ private:
     int cycles=0;
     bool initLat=false; 
     int stallCount=0;
-    int memacess;
+    int memacess=1;
   
     std::map<std::string, int> labels;
     
