@@ -41,23 +41,24 @@ To build and run the program, follow these steps:
 ## Minutes of Meetings:
 #### Date: 10-Apr-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Discussed and Update code for LRU Replacement policy.
+    Minutes:1.Update code for LRU Replacement policy and succesfully ran program.
             2.Updated code for to find Cache Access time.
 #### Date: 8-Apr-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Discussed and Update code for Replacement policies like LFU and Random.
+    Minutes:1.Updated code for Replacement policies like LFU and Random and checked if programruns correctly.
             2.Updated function to get MissRate,HitRate.
 #### Date: 6-Apr-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Update splitaddress function to get Tag ,Index ,Offset Bits.
+    Minutes:1.Update splitaddress function to get Tag ,Index ,Offset Bits correctly.
             2.Discussed and Update code for Replacement policies like LFU and Random.
 #### Date: 3-Apr-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Implementation of code for class CacheSimulator
-            2.Updated Code to take input Cache_Size, Block_size, Set_associativity,Replacement_policy, Memory_Acess from file.
+    Minutes:1.Discarded idea of storing dtata in cache
+            2.Implementation of code for class CacheSimulator
+            3..Updated Code to take input Cache_Size, Block_size, Set_associativity,Replacement_policy, Memory_Acess from file.
 #### Date: 30-Mar-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Checked references in net to understand cache briefly and how to acess and store data in cache.
+    Minutes:1.Checked references in net to understand cache briefly and how to access and store data in cache.
             2.Finally decided to take Cache as 2-D Array, and to store data and pc values in it for better implimentation. 
 #### Date: 27-Mar-2024
     Members:Rashmitha,Sahiti
