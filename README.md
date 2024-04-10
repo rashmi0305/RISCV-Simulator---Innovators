@@ -39,31 +39,30 @@ To build and run the program, follow these steps:
 ---
 
 ## Minutes of Meetings:
-#### Date: 27-Mar-2024
-    Members:Rashmitha,Sahiti
-    Minutes:1.Discussed on how to take cache data structure as we have to store both instructions and data where instructions are vectors and data is int.
-            2.Discussed ways to store instruction in main memory.
-#### Date: 30-Mar-2024
-    Members:Rashmitha,Sahiti
-    Minutes:1.Checked references in net to understand cache briefly and how to acess and store data in cache.
-            2.Finally decided to take Cache as 2-D Array, and to store data and pc values in it for better implimentation.  
-#### Date: 3-Apr-2024
-    Members:Rashmitha,Sahiti
-    Minutes:1.Implementation of code for class CacheSimulator
-            2.Updated Code to take input Cache_Size, Block_size, Set_associativity,Replacement_policy, Memory_Acess from file.
-#### Date: 6-Apr-2024
-    Members:Rashmitha,Sahiti
-    Minutes:1.Update splitaddress function to get Tag ,Index ,Offset Bits.
-            2.Discussed and Update code for Replacement policies like LFU and Random.
-#### Date: 8-Apr-2024
-    Members:Rashmitha,Sahiti
-    Minutes:1.Discussed and Update code for Replacement policies like LFU and Random.
-            2.Updated function to get MissRate,HitRate.
 #### Date: 10-Apr-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Discussed and Update code for LRU Replacement policy.
             2.Updated code for to find Cache Access time.
-
+#### Date: 8-Apr-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Discussed and Update code for Replacement policies like LFU and Random.
+            2.Updated function to get MissRate,HitRate.
+#### Date: 6-Apr-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Update splitaddress function to get Tag ,Index ,Offset Bits.
+            2.Discussed and Update code for Replacement policies like LFU and Random.
+#### Date: 3-Apr-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Implementation of code for class CacheSimulator
+            2.Updated Code to take input Cache_Size, Block_size, Set_associativity,Replacement_policy, Memory_Acess from file.
+#### Date: 30-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Checked references in net to understand cache briefly and how to acess and store data in cache.
+            2.Finally decided to take Cache as 2-D Array, and to store data and pc values in it for better implimentation. 
+#### Date: 27-Mar-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Discussed on how to take cache data structure as we have to store both instructions and data where instructions are vectors and data is int.
+            2.Discussed ways to store instruction in main memory.
 #### Date: 10-Mar-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Updated code for with forwarding and Latency
