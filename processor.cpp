@@ -8,6 +8,7 @@
 #include<algorithm>
 #include <bitset>
 #include<math.h>
+#include<limits.h>
 #include<sstream>
 #include<random>
 class Instruction{
@@ -161,7 +162,7 @@ public:
     }
     void printInst()//printing instructions to check if correctly flowing through pipeline
     {
-        std::cout<<"O"<<opcode<<" "<<"d"<<rd<<" "<<"rs1"<<rs1<<" "<<"rs2"<<rs2<<" "<<"L"<<label<<" "<<"pc"<<pc<<" "<<"rdv"<<rd_val<<" "<<rs1_val<<" "<<rs2_val<<" "<<imm<<" "<<address<<std::endl;
+        std::cout<<"Op"<<opcode<<" "<<" dest"<<rd<<" "<<" rs1"<<rs1<<" "<<" rs2"<<rs2<<" "<<"L"<<label<<" "<<" pc"<<pc<<" "<<" Values:"<<rd_val<<" "<<rs1_val<<" "<<rs2_val<<" "<<"Imm"<<imm<<" "<<address<<std::endl;
     }
     bool empty()
     {
@@ -182,7 +183,7 @@ bool predictBranch()
 
 class LRUCache {
     struct Node {
-        int key;
+        int key=0;
         Node* prev;
         Node* next;
         
@@ -197,22 +198,37 @@ public:
     LRUCache(){}
     void set(int _capacity, int _numSets) { capacity=_capacity; sets.resize(_numSets,nullptr); tails.resize(_numSets, nullptr); }
 
-    void put(int key, int setNum) {
-        if (setNum < 0 || setNum >= sets.size())
-            return; // Invalid set number
-        
-        Node* node = findNode(sets[setNum], key);
-        if (node) {
-            if (node == sets[setNum])
-            return;
-            removeNode(node,setNum);//hit so delete it here and move to mru
-        } else {//miss
-            if (size(sets[setNum]) >= capacity)//to be replaced
-                removeTail(setNum);//remove lru
-            node = new Node(key);//create new node for current block to be added
+    void print(int setNum)//use this to see if cache is working propeerly,it prints the linked list of that set
+    {
+        Node * t=sets[setNum];
+        while(t!=NULL)
+        {
+            std::cout<<t->key<<" ";
+            t=t->next;
         }
-        addToHead(node, setNum);
+        std::cout<<std::endl;
     }
+    int put(int key, int setNum) {
+    int a=-1;//since tag is never negative,if updated then miss and block to be replaced is set here.
+    if (setNum < 0 || (setNum >= sets.size() && setNum!=0))
+        return a; // Invalid set number
+    
+    Node* node = findNode(sets[setNum], key);
+    if (node) {
+        if (node == sets[setNum])
+            return -2;
+        removeNode(node,setNum);//hit so detach it here
+        a=-2;//for hit
+    } else {//miss
+        node = new Node(key);//create new node for current block to be added
+        a=-3;//miss but space in cache
+        if (size(sets[setNum]) >= capacity)//to be replaced
+            a=removeTail(setNum);//remove lru and return the tag of that block to be replaced.
+    }
+    addToHead(node, setNum);
+    return a;
+}
+
 
 private:
     Node* findNode(Node* head, int key) const {
@@ -226,7 +242,7 @@ private:
     }
 
 
-    void removeNode(Node* node,int setNum) {
+  void removeNode(Node* node, int setNum) {
     if (node->prev)
         node->prev->next = node->next;
     else {
@@ -241,15 +257,14 @@ private:
         node->next->prev = node->prev;
     else {
         // If node is the tail node
-        tails[node->key] = node->prev;
+        tails[setNum] = node->prev;
         if (node->prev)
             node->prev->next = nullptr;
         else
             sets[setNum] = nullptr;
     }
-
-    delete node;
 }
+
 
     void addToHead(Node* node, int setNum) {
         node->next = sets[setNum];
@@ -261,11 +276,12 @@ private:
             tails[setNum] = sets[setNum];
     }
 
-    void removeTail(int setNum) {
+    int removeTail(int setNum) {
         if (!tails[setNum])
-            return;
+            return -1;
 
         Node* tailNode = tails[setNum];
+        int key1=tailNode->key;
         if (tailNode->prev)
             tailNode->prev->next = nullptr;
         else
@@ -273,6 +289,7 @@ private:
 
         tails[setNum] = tailNode->prev;
         delete tailNode;
+        return key1;
     }
 
     int size(Node* head) const {
@@ -289,7 +306,8 @@ private:
 struct CacheBlock {
     int tag;
     bool valid;
-    int priority;
+    //int priority;
+    int frequency;
 };
 
 class CacheSimulator {
@@ -303,7 +321,7 @@ private:
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
-    int memacess=0;
+    int memacess=1;
     LRUCache lru_cache;
 std::pair<int,int> splitAddress(int address) {
     int num_bits_offset = static_cast<int>(std::log2(blockSize));
@@ -334,7 +352,7 @@ public:
         numBlocksPerSet = _associativity;
         numSets = cacheSize / (blockSize * numBlocksPerSet);
         if(choice==1)
-            lru_cache.set(blockSize,numSets);//initialize only if selected lru..
+            lru_cache.set(numBlocksPerSet,numSets);//initialize only if selected lru..
 
         cache.resize(numSets, std::vector<CacheBlock>(numBlocksPerSet));
         for (auto& set : cache) {
@@ -363,64 +381,73 @@ double getAcessRate(){
 
     bool access(int address) {
         std::cout<<"init address"<<address<<std::endl;
-        int max=0;
-        int max_block_tag=-1;//to keep track of lfu block
+        int lru_replaceIndex=-1;
         std::pair<int,int> a=splitAddress(address);
         int tag=a.first;
         int index=a.second;
+        if(choice==1)
+                {lru_replaceIndex=lru_cache.put(tag,index);//return the replaced tag if replace occurs
+                lru_cache.print(index);
+                }
+        for (int i = 0; i < numBlocksPerSet; ++i) {
+            if (cache[index][i].valid && cache[index][i].tag == tag) {//hit
+                if(choice==1 && lru_replaceIndex!=-2)
+                {
+                    std::cout<<"wrong answer "<<lru_replaceIndex;
+                }
+                else if (choice == 2) {
+                    cache[index][i].frequency++; // Increment frequency for LFU
+                }
+                cacheHits++;
+                return true; // Cache hit
+            }
+        }
+        // cacheMisses++;
         for (int i=0;i<numBlocksPerSet;i++) {
-            
-        
-            if (cache[index][i].valid==true && cache[index][i].tag ==tag ) {
-                for(auto & c:cache[index] )
-                    if(c.tag!=cache[index][i].tag && c.valid==true)
-                    {
-                        //check this logic**
-                        c.priority++;//MfU will have least number for priority variable and lfu will have the highest number.
-                        if(c.priority>max)
-                        {
-                            max=c.priority;
-                            max_block_tag=c.tag;//this is to be replaced if miss occurs
-                        }
-                        // Cache hit
-                    }
-                        cacheHits++;
-                        lru_cache.put(tag,index);
-                        return true;
+        //checks if set is not full ,directly adds block
+        std::cout<<cache[index][i].valid;
+        if(cache[index][i].valid==false)
+            {
+                if(choice==1 && lru_replaceIndex!=-3)
+                {
+                    cacheMisses++;
+                    return false;
                     
                 }
-        }
-            cacheMisses++;
-             for (int i=0;i<numBlocksPerSet;i++) {
-            //checks if set is not full ,directly adds block
-            std::cout<<cache[index][i].valid;
-            if(cache[index][i].valid==false)
-            {
                 cache[index][i].tag=tag;
                 cache[index][i].valid=true;
+                cacheMisses++;
                 return false;
             }
          }
-         if(choice==1)
-         {
-            lru_cache.put(tag,index);//inside this function it checks within the linked list and updates necessraily.
-         }
-        //LFU
-        if(choice==2)
-        {
-            std::cout<<"using lfu:";
-            std::cout<<max_block_tag<<std::endl;
-        // Cache miss, replace the least frequently used block in the set
-        for(int i=0;i<numBlocksPerSet;i++)
-        {
-            if(cache[index][i].tag==max_block_tag)
+         //set of cache is full replace using respective replacement policy
+          if(choice==1)
+          {
+            if(lru_replaceIndex>=0)
             {
-                cache[index][i].tag=tag;
-                std::cout<<cache[index][i].tag;
-                cache[index][i].valid= true;
+                cache[index][lru_replaceIndex].tag=tag;
+                cache[index][lru_replaceIndex].valid=true;
+                cacheMisses++;
             }
-        }
-        
+          }
+        //LFU
+        else if (choice == 2) { // LFU
+            int minFrequency = INT_MAX;
+            int lfuBlockIndex = -1;
+            for (int i = 0; i < numBlocksPerSet; ++i) {
+                if (!cache[index][i].valid) {
+                    lfuBlockIndex = i;
+                    break;
+                }
+                if (cache[index][i].frequency < minFrequency) {
+                    minFrequency = cache[index][i].frequency;
+                    lfuBlockIndex = i;
+                }
+            }
+            cache[index][lfuBlockIndex].tag = tag;
+            cache[index][lfuBlockIndex].valid = true;
+            cache[index][lfuBlockIndex].frequency = 1; // Reset frequency for the new block
+            cacheMisses++;
         }
         else
         {//Random-(update policy if possible)
@@ -429,6 +456,7 @@ double getAcessRate(){
         int random=lowerLimit + rand() % (upperLimit - lowerLimit + 1);
         cache[index][random].tag=tag;
         cache[index][random].valid=true;
+        cacheMisses++;
         }
         return false;
     }
@@ -443,7 +471,7 @@ private:
     int stall=0;
     int numInst=0;
     int cycles=0;
-    bool initLat=false; 
+   // bool initLat=false; 
     int stallCount=0;
     int memacess=1;
   
@@ -628,10 +656,6 @@ void Core::pipelineDecode() {
     {
         
     }
-    else if(initLat==false && EX_MEM_register.latency!=1){
-    initLat=true;
-    stall+=EX_MEM_register.latency;
-    stallCount+=EX_MEM_register.latency-1;}
     if(stall!=0)
     {
         stall--;
