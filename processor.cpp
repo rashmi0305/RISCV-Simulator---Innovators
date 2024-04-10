@@ -197,6 +197,7 @@ private:
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
+    int memacess;
 std::pair<int,int> splitAddress(int address) {
     int num_bits_offset = static_cast<int>(std::log2(blockSize));
         std::cout<<num_bits_offset<<std::endl;
@@ -216,10 +217,11 @@ std::pair<int,int> splitAddress(int address) {
 
 public:
      CacheSimulator(){}
-    void setCache  (int _cacheSize, int _blockSize, int _associativity,int _choice)
+    void setCache  (int _cacheSize, int _blockSize, int _associativity,int _choice,int memacess)
         {
          cacheSize=_cacheSize; 
          blockSize=_blockSize;
+         memacess=memacess;
         assert(cacheSize % blockSize == 0);
         choice=_choice;
         numBlocksPerSet = _associativity;
@@ -245,6 +247,9 @@ double getMissRate()  {
         }
     return static_cast<double>(cacheMisses) / totalAccesses; // Miss rate is 1 - hit rate
     }
+double getAcessRate(){
+    return cacheHits+(getMissRate()* memacess);
+}
 
     bool access(int address) {
         std::cout<<"init address"<<address<<std::endl;
@@ -288,12 +293,15 @@ double getMissRate()  {
         //LRU
         if(choice==1)
         {
+            std::cout<<"using lru:";
+            std::cout<<max_block_tag<<std::endl;
         // Cache miss, replace the least recently used block in the set
         for(int i=0;i<numBlocksPerSet;i++)
         {
             if(cache[index][i].tag==max_block_tag)
             {
                 cache[index][i].tag=tag;
+                std::cout<<cache[index][i].tag;
                 cache[index][i].valid= true;
             }
         }
@@ -322,6 +330,7 @@ private:
     int cycles=0;
     bool initLat=false; 
     int stallCount=0;
+    int memacess;
   
     std::map<std::string, int> labels;
     
@@ -341,6 +350,7 @@ private:
     void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
     void reset();
+    void setmem_acess(int x);
     void pipelineFetch(std::vector<int>& memory,CacheSimulator &cache);
     bool checkDependency(Instruction curr,Instruction prev,Instruction pprev);
     void pipelineDecode();
@@ -362,6 +372,9 @@ void Core::print()
      std::cout<<"IPC:"<<(double)numInst/cycles<<std::endl;
      std::cout<<"--------------------------------------------------------------"<<std::endl;
      
+}
+void Core::setmem_acess(int x){
+     int memacess=x;
 }
 
 void Core::execute(std::vector<int> &memory,CacheSimulator &cache) {
@@ -410,13 +423,13 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
         }
         else{
            
-            int n = pc+4000;
+            int n = pc*4+3000;
             // std::string add = std::bitset<32>(n).to_string();
             bool isHit=cache.access(n);
             if(isHit!=true)
             {
 
-                cycles+=2;//main mem access time-change to dynamic later change to add miss time
+                cycles+=memacess;//main mem access time-change to dynamic later change to add miss time
             }
             else {
                 //add hit time here?(for latency)
@@ -717,7 +730,7 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
             bool isHit=cache.access( EX_MEM_register.address);
             if(isHit==false)
             {
-                cycles+=2;//change later based on miss time
+                cycles+=memacess;//change later based on miss time
             }
             int data = memory[EX_MEM_register.address]; // Access memory
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
@@ -813,7 +826,7 @@ public:
 public:
     Processor();
     void run();
-    void setCache(int cache_size,int block_size,int set_ass,int rep_policy);
+    void setCache(int cache_size,int block_size,int set_ass,int rep_policy,int mem_acess);
     void setInitialMemory(int wordAddress, int value);
     void setMemory(int wordAddress, int value);
     int getMemory(int wordAddress);
@@ -821,9 +834,9 @@ public:
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
 };
 Processor::Processor() : memory(4096, 0), clock(0), cores(2),cache() {}
-void Processor::setCache(int cache_size,int block_size,int set_ass,int rep_policy)
+void Processor::setCache(int cache_size,int block_size,int set_ass,int rep_policy,int memacess)
 {
-    cache.setCache(cache_size,block_size,set_ass,rep_policy);
+    cache.setCache(cache_size,block_size,set_ass,rep_policy,memacess);
 }
 
 void Processor::run() {
@@ -949,7 +962,7 @@ public:
         int a=(int)lineWiseSplit.size();
         for(int i=0;i<a;i++)
         {
-            memory[4000+i]=i;
+         memory[3000+i*4]=i;
         }
         return parsedProgram;
     }
@@ -962,7 +975,7 @@ int main() {
     auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
-    //code for parsing cache
+   //code for parsing cache-the parameters are to be changed in the input file cache_params.txt
 
     std::ifstream file("cache_params.txt");
     
@@ -972,26 +985,29 @@ int main() {
     }
 
     uint64_t cache_size, block_size, set_ass;
-    int rep_policy;
+    int rep_policy,memacess;
 
   
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
 
-        if (!(iss >> cache_size >> block_size >> set_ass >> rep_policy)) {
+        if (!(iss >> cache_size >> block_size >> set_ass >> rep_policy>>memacess)) {
             std::cerr << "Error: Invalid input format." << std::endl;
             return 1;
         }
 
         
-        sim.setCache(cache_size, block_size, set_ass, rep_policy);//should also take main mem access time(update it)
+        sim.setCache(cache_size, block_size, set_ass, rep_policy,memacess);//should also take main mem access time(update it)
+        sim.cores[0].setmem_acess(memacess);
+        sim.cores[1].setmem_acess(memacess);
     }
 
     
     file.close();
-    std::cout<<cache_size<<" "<<block_size<<" "<< set_ass<<" "<< rep_policy;
-    sim.setCache(cache_size , block_size, set_ass,rep_policy);
+    std::cout<<cache_size<<" "<<block_size<<" "<< set_ass<<" "<< rep_policy<<" "<<memacess;
+    sim.setCache(cache_size , block_size, set_ass,rep_policy,memacess);
+
      for(int j=0;j<=1;j++){
      std::cout<<"Core"<<j+1<<":FORWARDING:Click 1 to enable,else disable";
      int i=1;
@@ -1038,6 +1054,7 @@ int main() {
     }
     sim.cores[0].print();
     sim.cores[1].print();
+    std::cout<<" Acess Time in Cycles "<<sim.cache.getAcessRate()<<std::endl;
     std::cout<<" Hit rate  "<<sim.cache.getHitRate()<<std::endl;
     std::cout<<" Miss rate  "<<sim.cache.getMissRate()<<std::endl;
 
