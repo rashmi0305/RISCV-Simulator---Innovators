@@ -143,7 +143,6 @@ To build and run the program, follow these steps:
     How to check data dependency
     How to calculate IPC 
     How to find whether stall is present or not
-    How to do execution based on latency
     How to initialize registers between IF,ID/RF,EXE,MEM and WB and take values from it
     Is there a need for another class-Instruction
     How to write branch prediction so that it can be extended later on
@@ -151,7 +150,7 @@ To build and run the program, follow these steps:
 ### Phase-1
     How to initialize registers and memory
     Should we use map to map register name to its value 
-    How to access contents in registers and update the values-using functions or directlt
+    How to access contents in registers and update the values-using functions or directly
     Should execute have separate file or include inside processor(while pipelining then?)
     Should we consider using enums for register names,instruction types,opcodes or directly access them in string format
  
