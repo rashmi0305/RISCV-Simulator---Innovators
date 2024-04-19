@@ -1,0 +1,42 @@
+INNOVATORS PHASE--1
+=========================================================================
+We have succesfully implemented all the requirements:
+FILES using:
+code-1 is for BUBBLE SORT
+code-2 is for SELECTION SORT
+
+================================
+Memory Usage:
+
+The memory vector in the Processor class represents the shared memory that both cores can access and modify.
+The setInitialMemory and setMemory functions are used to initialize and update the memory at specific addresses, respectively.
+The getMemory function retrieves the value at a specific memory address.
+
+==================================
+Core Registers:
+
+Each core (Core class) has its own set of registers stored in the registers member variable.
+The getRegister and setRegister functions are used to retrieve and update the values of registers, respectively.
+The getRegisters function provides access to the entire set of registers.
+
+===================================
+Files parsing :
+
+Here we are parsing two files named code1 and code2 ,When parsing code1 and code2 in the parser,
+we provide the memory address from the processor to the parser class as an argument. The parser loads the memory contents,
+and then we utilize the same memory in  processor which  maintains shared memory, and each core has its own set of registers.
+During execution, cores interact with both their local registers and the shared memory. The passing of memory from the processor 
+to cores happens implicitly as each core has access to the shared memory through the memory vector.
+
+=====================================
+shared Memory to Cores:
+
+The Processor class initializes the memory by reading program instructions from files using the Parser class. The parsed programs are 
+then assigned to the respective cores.The run function of the Processor iterates over the cores and executes their programs. 
+During execution, cores can read and modify the shared memory.The execute function of each Core reads instructions from its assigned 
+program and performs operations that may involve accessing and modifying memory.
+The Processor class ensures synchronization between cores by advancing the clock and managing program counters.
+
+=======================================
+
+
