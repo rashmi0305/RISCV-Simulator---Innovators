@@ -36,14 +36,14 @@ public:
         }
         std::cout<<std::endl;
     }
-    int put(int key, int setNum) {
+    int put(int key, int setNum) {//setnum is index
     int a=-1;//since tag is never negative,if updated then miss and block to be replaced is set here.
     if (setNum < 0 || (setNum >= sets.size() && setNum!=0))
         return a; // Invalid set number
     
     Node* node = findNode(sets[setNum], key);
     if (node) {
-        if (node == sets[setNum])
+        if (node == sets[setNum])//it is head
             return -2;
         removeNode(node,setNum);//hit so detach it here
         a=-2;//for hit
@@ -143,13 +143,13 @@ private:
 
     std::vector<std::vector<CacheBlock>> cache; // 2D vector representing sets and blocks
     int cacheSize=0;
-    int choice=0;//LRU or Random
+    int choice=0;//LRU or LFU or Random
     int blockSize=0;
     int numSets=0;
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
-    int memacess=1;
+    int memacess=1;//time req to acess memory if miss
     LRUCache lru_cache;
 std::pair<int,int> splitAddress(int address) {
     int num_bits_offset = static_cast<int>(std::log2(blockSize));
@@ -204,7 +204,7 @@ double getMissRate()  {
     return static_cast<double>(cacheMisses) / totalAccesses; // Miss rate is 1 - hit rate
     }
 double getAcessRate(){
-    return 1+(getMissRate()* memacess);
+    return 1+(getMissRate()* memacess);//assumed hit time =1 cycle here
 }
 
     bool access(int address) {

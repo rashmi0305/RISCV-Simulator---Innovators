@@ -556,7 +556,7 @@ void Processor::run() {
 
 void Processor::setInitialMemory(int wordAddress, int value) {
     // Implementation of setInitialMemory function
-    int index = (wordAddress - 268500992) / 4;
+    int index = (wordAddress) / 4;
         memory[index] = value;
 }
 
@@ -637,7 +637,7 @@ public:
                 labels[lineWiseSplit[i][0]] = i;
             }
         }
-        for (size_t i = 0; i < lineWiseSplit.size(); ++i) {
+        for (size_t i = 0; i < lineWiseSplit.size(); ++i) {//example arr1: .word 1 2...
             if (lineWiseSplit[i][0].find(":") != std::string::npos && lineWiseSplit[i].size() > 1 && lineWiseSplit[i][1] == ".word") {
                 std::vector<std::string>& line = lineWiseSplit[i];
                 line.erase(line.begin());
@@ -647,7 +647,7 @@ public:
 
                 }
                 
-            } else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".word") {
+            } else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".word") {//example .word 1 2 3..
                 for (size_t j = 1; j < lineWiseSplit[i].size(); ++j, index += 4) {
                     int value = std::stoi(lineWiseSplit[i][j]);
                     memory[index] = value;
