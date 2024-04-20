@@ -6,7 +6,7 @@
 CC = g++
 CFLAGS = -std=c++11 -Wall
 
-SRCS = processor.cpp
+SRCS = main.cpp
 OBJS = $(SRCS:.cpp=.o)
 EXEC = processor
 
