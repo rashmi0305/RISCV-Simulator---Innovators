@@ -206,88 +206,67 @@ double getMissRate()  {
 double getAcessRate(){
     return 1+(getMissRate()* memacess);//assumed hit time =1 cycle here
 }
+bool access(int address) {
+    // Split address into tag and index
+    std::pair<int,int> a = splitAddress(address);
+    int tag = a.first;
+    int index = a.second;
 
-    bool access(int address) {
-        std::cout<<"init address"<<address<<std::endl;
-        int lru_replaceIndex=-1;
-        std::pair<int,int> a=splitAddress(address);
-        int tag=a.first;
-        int index=a.second;
-        if(choice==1)
-                {lru_replaceIndex=lru_cache.put(tag,index);//return the replaced tag if replace occurs
-                lru_cache.print(index);
-                }
-        for (int i = 0; i < numBlocksPerSet; ++i) {
-            if (cache[index][i].valid && cache[index][i].tag == tag) {//hit
-                if(choice==1 && lru_replaceIndex!=-2)
-                {
-                    std::cout<<"wrong answer "<<lru_replaceIndex;
-                }
-                else if (choice == 2) {
-                    cache[index][i].frequency++; // Increment frequency for LFU
-                }
-                cacheHits++;
-                return true; // Cache hit
-            }
-        }
-        // cacheMisses++;
-        for (int i=0;i<numBlocksPerSet;i++) {
-        //checks if set is not full ,directly adds block
-        std::cout<<cache[index][i].valid;
-        if(cache[index][i].valid==false)
-            {
-                if(choice==1 && lru_replaceIndex!=-3)
-                {
-                    cacheMisses++;
-                    return false;
-                    
-                }
-                cache[index][i].tag=tag;
-                cache[index][i].valid=true;
-                cacheMisses++;
-                return false;
-            }
-         }
-         //set of cache is full replace using respective replacement policy
-          if(choice==1)
-          {
-            if(lru_replaceIndex>=0)
-            {
-                cache[index][lru_replaceIndex].tag=tag;
-                cache[index][lru_replaceIndex].valid=true;
-                cacheMisses++;
-            }
-          }
-        //LFU
-        else if (choice == 2) { // LFU
-            int minFrequency = INT_MAX;
-            int lfuBlockIndex = -1;
-            for (int i = 0; i < numBlocksPerSet; ++i) {
-                if (!cache[index][i].valid) {
-                    lfuBlockIndex = i;
-                    break;
-                }
-                if (cache[index][i].frequency < minFrequency) {
-                    minFrequency = cache[index][i].frequency;
-                    lfuBlockIndex = i;
-                }
-            }
-            cache[index][lfuBlockIndex].tag = tag;
-            cache[index][lfuBlockIndex].valid = true;
-            cache[index][lfuBlockIndex].frequency = 1; // Reset frequency for the new block
-            cacheMisses++;
-        }
-        else
-        {//Random-(update policy if possible)
-        int lowerLimit=0;
-        int upperLimit=numBlocksPerSet-1;// Generate a random number within the range [lowerLimit, upperLimit]
-        int random=lowerLimit + rand() % (upperLimit - lowerLimit + 1);
-        cache[index][random].tag=tag;
-        cache[index][random].valid=true;
-        cacheMisses++;
-        }
-        return false;
+    // Perform cache access based on chosen replacement policy
+    int lru_replaceIndex = -1; // For LRU replacement
+
+    // Check if using LRU policy
+    if (choice == 1) {
+        lru_replaceIndex = lru_cache.put(tag, index); // Perform LRU cache access
+        lru_cache.print(index); // Debugging: Print the cache contents
     }
+
+    // Check if the block is already in the cache
+    for (int i = 0; i < numBlocksPerSet; ++i) {
+        if (cache[index][i].valid && cache[index][i].tag == tag) { // Cache hit
+            if (choice != 1 || (choice == 1 && lru_replaceIndex == -2)) {
+                cacheHits++;
+            }
+            if (choice == 2) {
+                cache[index][i].frequency++; // Increment frequency for LFU
+            }
+            return true; // Cache hit
+        }
+    }
+
+    // Cache miss
+    cacheMisses++;
+
+    // Check which replacement policy is used and update the cache structure accordingly
+    if (choice == 1 && lru_replaceIndex != -2) { // LRU
+        cache[index][lru_replaceIndex].tag = tag; // Replace block with new tag
+        cache[index][lru_replaceIndex].valid = true; // Mark block as valid
+    } else if (choice == 2) { // LFU
+        int minFrequency = INT_MAX;
+        int lfuBlockIndex = -1;
+        for (int i = 0; i < numBlocksPerSet; ++i) {
+            if (!cache[index][i].valid) { // Found an empty block, use it
+                lfuBlockIndex = i;
+                break;
+            }
+            if (cache[index][i].frequency < minFrequency) { // Find block with minimum frequency
+                minFrequency = cache[index][i].frequency;
+                lfuBlockIndex = i;
+            }
+        }
+        cache[index][lfuBlockIndex].tag = tag; // Replace block with new tag
+        cache[index][lfuBlockIndex].valid = true; // Mark block as valid
+        cache[index][lfuBlockIndex].frequency = 1; // Reset frequency for the new block
+    } else { // Random
+        int randomIndex = rand() % numBlocksPerSet; // Select a random block to replace
+        cache[index][randomIndex].tag = tag; // Replace block with new tag
+        cache[index][randomIndex].valid = true; // Mark block as valid
+    }
+
+    return false; // Cache miss
+}
+
+
 };
 #endif 
  
