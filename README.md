@@ -39,6 +39,18 @@ To build and run the program, follow these steps:
 ---
 
 ## Minutes of Meetings:
+#### Date: 8-may-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Decide to use 2-bit branch predictor
+            2.Thought about how to handle miss prediction
+            3.Decided to use stride prefetcher
+#### Date: 7-may-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Checked benefits of 2nd level cache and pre-fetch buffer
+            2.Thought about storing pre-fetch data in buffer or into the cache
+#### Date: 6-may-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Decided to implement pre-fetch or another level of cache and upadte branch prediction logic
 #### Date: 10-Apr-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Update code for LRU Replacement policy and succesfully ran program.
