@@ -169,8 +169,7 @@ public:
     bool empty()
     {
         return cleared;
-    }
-    
+    }  
 
 };
 #endif 

@@ -591,7 +591,6 @@ int Core::getRegister(const std::string& reg) {
             return 0;
         }
 }
-
 void Core::setRegister(std::string reg, int num) {
     // Implementation of setRegister function
      if (registers.find(reg) != registers.end() && reg!="zero") {
