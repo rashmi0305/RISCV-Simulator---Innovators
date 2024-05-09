@@ -52,7 +52,7 @@ private:
     void setvregister(std::string reg, std::vector<int >num);
     void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
-    std::unordered_map<std::string, std::vector<int>> getvregisters() const;
+    const std::unordered_map<std::string, std::vector<int>> getvregisters() const;
     void reset();
     void setmem_acess(int x);
     void pipelineFetch(std::vector<int>& memory,CacheSimulator &cache);
@@ -185,7 +185,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
 {   //if(!dataforwarding){
     if(stall==0 )
     {
-        if(prev.opcode=="lw" && prev.opcode=="vlw"&& dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
+        if((prev.opcode=="lw" || prev.opcode=="vlw")&& dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
     {
         stall++;
         stall1=true;
@@ -209,7 +209,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         }
 
       }
-      else if(pprev.opcode=="lw"  && prev.opcode=="vlw" && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
+      else if((pprev.opcode=="lw"  || prev.opcode=="vlw") && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
     {
         stall++;
         stallCount++;
@@ -256,8 +256,8 @@ void Core::pipelineDecode() {
     }
     if(ID_EX_register.opcode=="vadd"||ID_EX_register.opcode=="vmul"||ID_EX_register.opcode=="vsub"){
         ID_EX_register.rd_vval=getvregisters(ID_EX_register.rd);
-        ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
-        ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+        ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
+        ID_EX_register.rs2_vval=getvregisters(ID_EX_register.rs2);
     }
     if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
     {
@@ -370,6 +370,13 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
+    if (opcode == "muli") {
+        for(int i=0;i<4;i++){
+        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] * ID_EX_register.imm;
+        }
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    } 
     if (opcode == "vaddi") {
         for(int i=0;i<4;i++){
         ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] + ID_EX_register.imm;
@@ -385,6 +392,13 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
      if (opcode == "vadd") {
         for(int i=0;i<4;i++){
         ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] + ID_EX_register.rs2_vval[i];
+        }
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    } 
+      if (opcode == "vmul") {
+        for(int i=0;i<4;i++){
+        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i];
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
@@ -603,7 +617,7 @@ void Core::reset() {
     {"x26", 0}, {"x27", 0}, {"x28", 0}, {"x29", 0}, {"x30", 0},
     {"x31", 0}
         };
-        std::unordered_map<std::string, std::vector<int>> vregisters{
+       vregisters={
     {"v0", {0,0,0,0}}, {"v1", {0,0,0,0}}, {"v2", {0,0,0,0}}, {"v3", {0,0,0,0}},
     {"v4", {0,0,0,0}}, {"v5", {0,0,0,0}}, {"v6", {0,0,0,0}}, {"v7", {0,0,0,0}}
 };
