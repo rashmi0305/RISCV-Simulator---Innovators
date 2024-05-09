@@ -39,18 +39,22 @@ To build and run the program, follow these steps:
 ---
 
 ## Minutes of Meetings:
+#### Date: 9-may-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Decided to integrate simd unit into the processor itself.
+            2.Decided i=on using special vector registers and instructions-vadd vaddi vmul vmuli vlw vsw 
 #### Date: 8-may-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Decide to use 2-bit branch predictor
-            2.Thought about how to handle miss prediction
-            3.Decided to use stride prefetcher
+    Minutes:1.Decided to check previous 2 addresses logic in stride prefetcher.
+            2.Tested prefetching-got better values for hit rate etc
+            3.Decided to do SIMD
 #### Date: 7-may-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Checked benefits of 2nd level cache and pre-fetch buffer
-            2.Thought about storing pre-fetch data in buffer or into the cache
+    Minutes:1.Decided to do prefetching using stride prefetcher
+            2.Thought about how to store pre-fetch data into cache-use access function written before
 #### Date: 6-may-2024
     Members:Rashmitha,Sahiti
-    Minutes:1.Decided to implement pre-fetch or another level of cache and upadte branch prediction logic
+    Minutes:1.Decided to implement pre-fetch or another level of cache
 #### Date: 10-Apr-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Update code for LRU Replacement policy and succesfully ran program.
