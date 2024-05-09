@@ -42,7 +42,7 @@ To build and run the program, follow these steps:
 #### Date: 9-may-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Decided to integrate simd unit into the processor itself.
-            2.Decided i=on using special vector registers and instructions-vadd vaddi vmul vmuli vlw vsw 
+            2.Decided on using special vector registers and instructions-vadd vaddi vmul vmuli vlw vsw 
 #### Date: 8-may-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Decided to check previous 2 addresses logic in stride prefetcher.
