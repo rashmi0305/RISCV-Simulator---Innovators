@@ -138,6 +138,7 @@ struct CacheBlock {
     int frequency;
 };
 
+
 class CacheSimulator {
 private:
 
@@ -149,6 +150,7 @@ private:
     int numBlocksPerSet=0;//set associativity
     double cacheHits=0;
     double cacheMisses=0;
+    int prefetch_dis=2;
     int memacess=1;//time req to acess memory if miss
     LRUCache lru_cache;
 std::pair<int,int> splitAddress(int address) {
@@ -206,6 +208,48 @@ double getMissRate()  {
 double getAcessRate(){
     return 1+(getMissRate()* memacess);//assumed hit time =1 cycle here
 }
+
+// Global variables to store the previous access addresses
+int prevAddress1 = -1;
+int prevAddress2 = -1;
+// Global variable to store the stride value
+int stride = -1;
+
+bool isStridedPattern(int address) {
+    if (prevAddress1 != -1 && prevAddress2 != -1) {
+        int stride1 = address - prevAddress1;
+        int stride2 = prevAddress1 - prevAddress2;
+
+        if (std::abs(stride1) == std::abs(stride2)) {
+            stride = std::abs(stride1); // Setting the stride value
+            return true;
+        }
+    }
+    else if(prevAddress1==-1 && prevAddress2==-1)
+    {
+        prevAddress1=address;
+    }
+    else
+    {
+        prevAddress2 = prevAddress1;
+        prevAddress1 = address;
+    }
+    
+    return false;
+}
+bool prefetch(int address)
+{
+        // Checking for prefetching based on strided pattern
+    if (isStridedPattern(address)) {
+        int prefetchAddress = address + stride;
+        for(int i=prefetchAddress;i<=prefetchAddress+prefetch_dis;i++){
+           access(prefetchAddress);
+        }
+        //write a loop for prefecth degree
+       
+    }
+     return access(address);
+}
 bool access(int address) {
     // Split address into tag and index
     std::pair<int,int> a = splitAddress(address);
@@ -230,12 +274,15 @@ bool access(int address) {
             if (choice == 2) {
                 cache[index][i].frequency++; // Increment frequency for LFU
             }
+           
             return true; // Cache hit
         }
     }
 
     // Cache miss
     cacheMisses++;
+
+
 
     // Check which replacement policy is used and update the cache structure accordingly
     if (choice == 1 && lru_replaceIndex != -2) { // LRU
@@ -263,10 +310,13 @@ bool access(int address) {
         cache[index][randomIndex].valid = true; // Mark block as valid
     }
 
+  
+
     return false; // Cache miss
 }
 
 
+
 };
-#endif 
+ #endif 
  

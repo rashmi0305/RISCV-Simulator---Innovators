@@ -59,13 +59,13 @@ public:
         this->pc=pc;
         opcode=data[0];
         latency=instLatencies[opcode];
-        if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
+        if(opcode=="add"||opcode=="sub" || opcode=="vadd" || opcode=="vsub")//add rd, rs1, rs2;sub rd, rs1, rs2
         {
             rd = data[1];
             rs1 = data[2];
             rs2 = data[3];
         }
-        else if(opcode=="addi" || opcode=="srli"|| opcode=="slli")
+        else if(opcode=="addi" || opcode=="srli"|| opcode=="slli" || opcode=="vaddi")
         {
             rd = data[1];
             rs1 = data[2];
@@ -90,7 +90,7 @@ public:
                 rs1=memOperand;
             }
         }
-        else if (opcode == "sw") //sw rs2, imm(rs1)
+        else if (opcode == "sw" || opcode=="vsw") //sw rs2, imm(rs1)
         {
             if (data.size() == 3)
             {
@@ -152,6 +152,7 @@ public:
                 std::cerr << "Invalid 'j' instruction format at line " << pc << std::endl;  
             }
         }
+       
 
 
     }

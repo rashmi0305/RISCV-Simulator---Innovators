@@ -42,7 +42,6 @@ it is fetched from the main memory by taking extra cycles.We have added instruct
 
 ##  What we have not Implemented
 
-In the extension of our simulator to incorporate cache, we have not implemented variable latency inside th epipeline.However stall count for memory instructions (loads and stores) and the instruction fetch (IF) stage have been added correctly. 
-As we are not able to hold the instruction until latency becomes zero in pipeline the instruction is getting flushed and empty
-instruction is getting passed to next stage instead of correct instruction because of this we were not able to implement latency.
+In the extension of our simulator to incorporate cache, we have not implemented variable latency inside the pipeline.However stall count for memory instructions (loads and stores) and the instruction fetch (IF) stage have been added correctly. 
+As we are not able to hold the instruction until latency becomes zero in pipeline the instruction is getting flushed and empty instruction is getting passed to next stage instead of correct instruction because of this we were not able to implement latency.
 

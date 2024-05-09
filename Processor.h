@@ -125,7 +125,7 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
            
             int n = pc*4+3000;
             // std::string add = std::bitset<32>(n).to_string();
-            bool isHit=cache.access(n);
+            bool isHit=cache.prefetch(n);
             if(isHit!=true)
             {
 
@@ -423,7 +423,7 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
             // Perform memory read operation for load instruction
-            bool isHit=cache.access( EX_MEM_register.address);
+            bool isHit=cache.prefetch( EX_MEM_register.address);
             if(isHit==false)
             {
                 cycles+=memacess;//change later based on miss time
