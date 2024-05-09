@@ -20,6 +20,9 @@ public:
     int rd_val=0;
     int rs1_val=0;
     int rs2_val=0;
+    std::vector<int> rd_vval={0};
+    std::vector<int> rs1_vval={0};
+    std::vector<int> rs2_vval={0};
     int imm=0;
     int latency=1;
     int address=0;
@@ -44,6 +47,9 @@ public:
         rd_val = 0;
         rs1_val = 0;
         rs2_val = 0;
+        rd_vval = {0};
+        rs1_vval = {0};
+        rs2_vval = {0};
         imm = 0;
         address = 0;
         rd_ready = false;
