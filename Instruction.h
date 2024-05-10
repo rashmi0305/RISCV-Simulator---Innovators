@@ -65,7 +65,7 @@ public:
         this->pc=pc;
         opcode=data[0];
         latency=instLatencies[opcode];
-        if(opcode=="add"||opcode=="sub" || opcode=="vadd" || opcode=="vsub"||opcode=="vmul")//add rd, rs1, rs2;sub rd, rs1, rs2
+        if(opcode=="add"||opcode=="sub" || opcode=="vadd" || opcode=="vsub"||opcode=="vmul"||opcode=="vdot")//add rd, rs1, rs2;sub rd, rs1, rs2
         {
             rd = data[1];
             rs1 = data[2];

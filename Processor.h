@@ -185,7 +185,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
 {   //if(!dataforwarding){
     if(stall==0 )
     {
-        if((prev.opcode=="lw" || prev.opcode=="vlw")&& dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
+        if((prev.opcode=="lw" )&& dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
     {
         stall++;
         stall1=true;
@@ -209,7 +209,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         }
 
       }
-      else if((pprev.opcode=="lw"  || prev.opcode=="vlw") && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
+      else if((pprev.opcode=="lw"  ) && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
     {
         stall++;
         stallCount++;
@@ -254,20 +254,32 @@ void Core::pipelineDecode() {
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
         ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
     }
-    if(ID_EX_register.opcode=="vadd"||ID_EX_register.opcode=="vmul"||ID_EX_register.opcode=="vsub"){
+    else if(ID_EX_register.opcode=="vadd"||ID_EX_register.opcode=="vmul"||ID_EX_register.opcode=="vsub"){
         ID_EX_register.rd_vval=getvregisters(ID_EX_register.rd);
         ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
         ID_EX_register.rs2_vval=getvregisters(ID_EX_register.rs2);
+    }
+    else if(ID_EX_register.opcode=="vdot"){
+       ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+        ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
+        ID_EX_register.rs2_vval=getvregisters(ID_EX_register.rs2); 
     }
     if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
     }
-     if(ID_EX_register.opcode=="vaddi"||ID_EX_register.opcode=="vmuli")
+    else if(ID_EX_register.opcode=="vaddi"||ID_EX_register.opcode=="vmuli")
     {
         ID_EX_register.rd_vval=getvregisters(ID_EX_register.rd);
         ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
+    }
+    
+    else if (ID_EX_register.opcode == "sw") 
+    {
+        //sw rs2, imm(rs1)
+        ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
+        ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
     }
     else if (ID_EX_register.opcode == "lw")
     {
@@ -279,20 +291,14 @@ void Core::pipelineDecode() {
     {
     // Parse the instruction and extract rd, imm, and rs1
     ID_EX_register.rd_vval = getvregisters(ID_EX_register.rd);
-    ID_EX_register.rs1_vval = getvregisters(ID_EX_register.rs1);
+    ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
     }
 
-    else if (ID_EX_register.opcode == "sw") 
-    {
-        //sw rs2, imm(rs1)
-        ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
-        ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
-    }
      else if (ID_EX_register.opcode == "vsw")
     {
     // Parse the instruction and extract rd, imm, and rs1
     ID_EX_register.rs2_vval = getvregisters(ID_EX_register.rs2);
-    ID_EX_register.rs1_vval = getvregisters(ID_EX_register.rs1);
+    ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
     }
 
     else if (ID_EX_register.opcode == "bge" || ID_EX_register.opcode == "bne" ||ID_EX_register.opcode == "beq" || ID_EX_register.opcode == "blt")
@@ -370,10 +376,19 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-    if (opcode == "muli") {
+    if (opcode == "vmuli") {
         for(int i=0;i<4;i++){
         ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] * ID_EX_register.imm;
         }
+        // Update the EX_MEM_register
+       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
+    }
+    if (opcode == "vdot") {
+        int sum=0;
+        for(int i=0;i<4;i++){
+        sum=sum+ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i];
+        }
+        ID_EX_register.rd_val=sum;
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
@@ -384,12 +399,12 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-    if (opcode == "add") {
+    else if (opcode == "add") {
         ID_EX_register.rd_val = ID_EX_register.rs1_val + ID_EX_register.rs2_val;
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-     if (opcode == "vadd") {
+    else  if (opcode == "vadd") {
         for(int i=0;i<4;i++){
         ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] + ID_EX_register.rs2_vval[i];
         }
@@ -422,32 +437,27 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
      else if ( opcode == "slli") {
          ID_EX_register.rd_val=ID_EX_register.rs1_val<<ID_EX_register.imm;
     } 
-    else if (opcode == "lw") {
+    else if (opcode == "lw"||opcode=="vlw") {
        
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
 
     }
-    else if (opcode == "vlw") {
-         int sum=0;
-     for(int i=0;i<4;i++){
-        sum =sum+ID_EX_register.rs1_vval[i];
-     }
-        ID_EX_register.address=sum+ID_EX_register.imm;
 
-    }
-     else if (opcode == "sw") {
+     else if (opcode == "sw"||opcode == "vsw") {
      
         ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
 
      }
-     else if (opcode == "vsw") {
-        int sum=0;
-     for(int i=0;i<4;i++){
-        sum =sum+ID_EX_register.rs1_vval[i];
-     }
-        ID_EX_register.address=sum+ID_EX_register.imm;
+      else if (opcode == "vsw") {
+     
+        ID_EX_register.address =ID_EX_register.rs1_val +ID_EX_register.imm;
 
      }
+     else if (opcode=="vlw") {
+       
+        ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
+
+    }
     
     
        else if (opcode == "bge") {
@@ -524,7 +534,13 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
             MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
             MEM_WB_register.rd_val = data; // Update instruction's destination register value
         } 
-         if (opcode == "vlw") {
+        else if (opcode == "sw") {//we have assumed cpu doesnt wait until entire write is complemeted,(waits only till written in some intermediate buffer)
+            // Perform memory write operation for store instruction
+            memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
+            MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
+        
+        }
+        else if (opcode == "vlw") {
             // Perform memory read operation for load instruction
            std:: vector<int> data;
            for(int i=0;i<4;i++){
@@ -533,12 +549,7 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
             MEM_WB_register.rd_vval[i] = data[i]; // Update instruction's destination register value
            }
         } 
-        else if (opcode == "sw") {//we have assumed cpu doesnt wait until entire write is complemeted,(waits only till written in some intermediate buffer)
-            // Perform memory write operation for store instruction
-            memory[EX_MEM_register.address] = EX_MEM_register.rs2_val; // Write data to memory
-            MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
         
-        }
         else if (opcode == "vsw") {//we have assumed cpu doesnt wait until entire write is complemeted,(waits only till written in some intermediate buffer)
             // Perform memory write operation for store instruction
             for(int i=0;i<4;i++){
