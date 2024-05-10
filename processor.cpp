@@ -25,6 +25,9 @@ public:
     int rd_val=0;
     int rs1_val=0;
     int rs2_val=0;
+    int rd_vval=0;
+    int rs1_vval=0;
+    int rs2_vval=0;
     int imm=0;
     int latency=1;
     int address=0;
@@ -64,13 +67,13 @@ public:
         this->pc=pc;
         opcode=data[0];
         latency=instLatencies[opcode];
-        if(opcode=="add"||opcode=="sub")//add rd, rs1, rs2;sub rd, rs1, rs2
+        if(opcode=="add"||opcode=="sub"||opcode=="vadd"||opcode=="vsub"||opcode=="vmul")//add rd, rs1, rs2;sub rd, rs1, rs2
         {
             rd = data[1];
             rs1 = data[2];
             rs2 = data[3];
         }
-        else if(opcode=="addi" || opcode=="srli"|| opcode=="slli")
+        else if(opcode=="addi" || opcode=="srli"|| opcode=="slli"||opcode=="vaddi"||opcode=="vmuli")
         {
             rd = data[1];
             rs1 = data[2];
@@ -467,6 +470,7 @@ double getAcessRate(){
 class Core {
 private:
     std::unordered_map<std::string, int> registers;
+    std::unordered_map<std::string, std::vector<int>> vregisters;
     bool stall1=0; //stall in case of load word
     int stall=0;
     int numInst=0;
@@ -488,10 +492,13 @@ private:
     std::vector<std::vector<std::string>> program;
     Core():program(), labels(), pc(0), registers(), IF_ID_register(), ID_EX_register(), EX_MEM_register(), MEM_WB_register() {}
     void execute(std::vector<int>& memory,CacheSimulator &cache);
-    int getRegister(const std::string& reg);
+    int  getRegister(const std::string& reg);
+   std::vector<int> getvregisters(const std::string& reg);
     void setRegister(std::string reg, int num);
+    void setvregister(std::string reg,std:: vector<int> num);
     void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
+    std::unordered_map<std::string, std::vector<int>> & getvregisters() const;
     void reset();
     void setmem_acess(int x);
     void pipelineFetch(std::vector<int>& memory,CacheSimulator &cache);
@@ -608,7 +615,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
 {   //if(!dataforwarding){
     if(stall==0 )
     {
-        if(prev.opcode=="lw" && dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
+        if(prev.opcode=="lw" && prev.opcode=="lwv" && dataforwarding && (curr.rs1==prev.rd || curr.rs2==prev.rd) )//-down dep-prev done
     {
         stall++;
         stall1=true;
@@ -632,7 +639,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         }
 
       }
-      else if(pprev.opcode=="lw" && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
+      else if(pprev.opcode=="lw" && prev.opcode=="lwv" && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
     {
         stall++;
         stallCount++;
@@ -672,6 +679,12 @@ void Core::pipelineDecode() {
     
     ID_EX_register = IF_ID_register;
     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
+    {
+        ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
+        ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
+        ID_EX_register.rs2_val=getRegister(ID_EX_register.rs2);
+    }
+     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
@@ -924,6 +937,15 @@ int Core::getRegister(const std::string& reg) {
             return 0;
         }
 }
+std::vector<int> Core::getvregisters(const std::string& reg) {
+    // Implementation of getRegister function
+    if (vregisters.find(reg) != vregisters.end()) {
+            return vregisters[reg];
+        } else {
+            std::cerr << "vRegister " << reg << " not found." << std::endl;
+            return {0};
+        }
+}
 
 void Core::setRegister(std::string reg, int num) {
     // Implementation of setRegister function
@@ -933,6 +955,13 @@ void Core::setRegister(std::string reg, int num) {
             std::cerr << "Register " << reg << " not found." << std::endl;
         }
 }
+ void Core::setvregister(std::string reg,std:: vector<int> num){
+      if (vregisters.find(reg) != vregisters.end() && reg!="zero") {
+            vregisters[reg] = num;
+        } else {
+            std::cerr << "Register " << reg << " not found." << std::endl;
+        }
+ }
 
 const std::unordered_map<std::string, int>& Core::getRegisters() const {
     // Implementation of getRegisters function

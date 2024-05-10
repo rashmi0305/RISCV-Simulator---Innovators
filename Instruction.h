@@ -77,7 +77,7 @@ public:
             rs1 = data[2];
             imm = std::stoi(data[3]);
         }
-        else if(opcode=="lw")//ld rd, imm(rs1)
+        else if(opcode=="lw"||opcode=="vlw")//ld rd, imm(rs1)
         {
              rd = data[1];
             std::string memOperand = data[2];
