@@ -12,7 +12,7 @@ int main() {
     Parser parser;
     
     auto parsedProgram1 = parser.parseFromFile("code1.txt",sim.memory); // Parse the program from a file
-    auto parsedProgram2 = parser.parseFromFile("code2.txt",sim.memory);//2nd file
+    auto parsedProgram2 = parser.parseFromFile("vcode1.txt",sim.memory);//2nd file
     sim.cores[0].setProgram(parsedProgram1);
     sim.cores[1].setProgram(parsedProgram2);
    //code for parsing cache-the parameters are to be changed in the input file cache_params.txt
@@ -77,17 +77,38 @@ int main() {
     sim.run();    
     const auto& coreRegisters0 = sim.getCoreRegisters(0);
     const auto& coreRegisters1 = sim.getCoreRegisters(1);
+    const auto& vecRegisters0=sim.getCoreVectorRegisters(0);
+     const auto& vecRegisters1=sim.getCoreVectorRegisters(1);
+
   
     std::cout << "+============ After Run ============:" << std::endl;
     std::cout << "Core 0 Registers:" << std::endl;
     for (const auto& entry : coreRegisters0) {
         std::cout << entry.first << ": " << entry.second<<std::endl;
     }
-
+    std::cout << "Core 0 Vector Registers:" << std::endl;
+for (const auto& entry : vecRegisters0) {
+    std::cout << entry.first << ": ";
+    const auto& vec = entry.second;
+    for (int value : vec) {
+        std::cout << value << " ";
+    }
+    std::cout << std::endl;
+}
     std::cout << "Core 1 Registers:" << std::endl;
     for (const auto& entry : coreRegisters1) {
         std::cout << entry.first << ": " << entry.second << std::endl;
     }
+    std::cout << "Core 1 Vector Registers:" << std::endl;
+for (const auto& entry : vecRegisters1) {
+    std::cout << entry.first << ": ";
+    const auto& vec = entry.second;
+    for (int value : vec) {
+        std::cout << value << " ";
+    }
+    std::cout << std::endl;
+}
+
     std::cout<<"FINAL MEMORY"<<std::endl;
     for (const auto& entry : sim.getMemoryContents()) {
         std::cout << entry<<" ";

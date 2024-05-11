@@ -34,7 +34,7 @@ private:
     int memacess=1;
   
     std::map<std::string, int> labels;
-    
+    std::map<std::string, std::pair<int, int>> vectorInfo;
     Instruction IF_ID_register;//to store the instructions temporarily in between stages
     Instruction ID_EX_register;
     Instruction EX_MEM_register;
@@ -50,9 +50,9 @@ private:
     std::vector<int> getvregisters(const std::string& reg);
     void setRegister(std::string reg, int num);
     void setvregister(std::string reg, std::vector<int >num);
-    void setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram);
+    void setProgram(std::tuple<std::vector<std::vector<std::string>>, std::map<std::string, int>,std::map<std::string,std::pair<int,int>>> parsedProgram);
     const std::unordered_map<std::string, int>& getRegisters() const;
-    const std::unordered_map<std::string, std::vector<int>> getvregisters() const;
+    const std::unordered_map<std::string, std::vector<int>>& getVectorRegisters() const;
     void reset();
     void setmem_acess(int x);
     void pipelineFetch(std::vector<int>& memory,CacheSimulator &cache);
@@ -85,7 +85,7 @@ std::vector<int> Core::getvregisters(const std::string& reg) {
     if (vregisters.find(reg) != vregisters.end()) {
             return vregisters[reg];
         } else {
-            std::cerr << "vRegister " << reg << " not found." << std::endl;
+            std::cerr << "vector Register " << reg << " not found." << std::endl;
             return {0};
         }
 }
@@ -152,7 +152,7 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
                 cycles+=memacess;//main mem access time-change to dynamic later change to add miss time
             }
             else {
-                //add hit time here?(for latency)
+                //add hit time here?(for latency) assumed to be 1 for now
             }
             break;
          }
@@ -198,6 +198,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         {
             stall+=1;
             stallCount+=1;
+            
         }
         return  true;
        }
@@ -209,7 +210,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
         }
 
       }
-      else if((pprev.opcode=="lw"  ) && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
+      else if((pprev.opcode=="lw" ) && dataforwarding && (pprev.rd==curr.rs1 || pprev.rd==curr.rs2))//-down dep-pprev done
     {
         stall++;
         stallCount++;
@@ -217,6 +218,7 @@ bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
     else if (!pprev.rd.empty() && (pprev.rd == curr.rs1 || pprev.rd == curr.rs2)) {//up dependency for prev prev-done
             stall+=1;
             stallCount+=1;
+            std::cout<<"I am";
         
     }
     
@@ -259,12 +261,8 @@ void Core::pipelineDecode() {
         ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
         ID_EX_register.rs2_vval=getvregisters(ID_EX_register.rs2);
     }
-    else if(ID_EX_register.opcode=="vdot"){
-       ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
-        ID_EX_register.rs1_vval=getvregisters(ID_EX_register.rs1);
-        ID_EX_register.rs2_vval=getvregisters(ID_EX_register.rs2); 
-    }
-    if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
+
+    else if(ID_EX_register.opcode=="addi"||ID_EX_register.opcode=="srli"||ID_EX_register.opcode=="slli")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
         ID_EX_register.rs1_val=getRegister(ID_EX_register.rs1);
@@ -291,7 +289,10 @@ void Core::pipelineDecode() {
     {
     // Parse the instruction and extract rd, imm, and rs1
     ID_EX_register.rd_vval = getvregisters(ID_EX_register.rd);
-    ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
+    if(ID_EX_register.imm!=-1)
+    {
+        ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
+    }
     }
 
      else if (ID_EX_register.opcode == "vsw")
@@ -377,24 +378,15 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
     if (opcode == "vmuli") {
-        for(int i=0;i<4;i++){
-        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] * ID_EX_register.imm;
+        for(int i=0;i<ID_EX_register.rs1_vval.size();i++){
+        ID_EX_register.rd_vval.push_back(ID_EX_register.rs1_vval[i] * ID_EX_register.imm);
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     }
-    if (opcode == "vdot") {
-        int sum=0;
-        for(int i=0;i<4;i++){
-        sum=sum+ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i];
-        }
-        ID_EX_register.rd_val=sum;
-        // Update the EX_MEM_register
-       // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
-    } 
     if (opcode == "vaddi") {
-        for(int i=0;i<4;i++){
-        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] + ID_EX_register.imm;
+        for(int i=0;i<ID_EX_register.rs1_vval.size();i++){
+        ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] + ID_EX_register.imm);
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
@@ -405,15 +397,27 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
     else  if (opcode == "vadd") {
-        for(int i=0;i<4;i++){
-        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] + ID_EX_register.rs2_vval[i];
+        int i;
+        for( i=0;i<std::min(ID_EX_register.rs1_vval.size(),ID_EX_register.rs2_vval.size());i++){
+        ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] + ID_EX_register.rs2_vval[i]);
         }
+        while(ID_EX_register.rs1_vval.size()>i)
+        {
+           ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i]);
+             i++;
+        }
+        while(ID_EX_register.rs2_vval.size()>i)
+        {
+           ID_EX_register.rd_vval.push_back( ID_EX_register.rs2_vval[i]);
+            i++;
+        }
+    
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
       if (opcode == "vmul") {
-        for(int i=0;i<4;i++){
-        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i];
+        for(int i=0;i<std::min(ID_EX_register.rs1_vval.size(),ID_EX_register.rs2_vval.size());i++){
+        ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i]);
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
@@ -425,8 +429,8 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
        
     } 
     if (opcode == "vsub") {
-        for(int i=0;i<4;i++){
-        ID_EX_register.rd_vval[i] = ID_EX_register.rs1_vval[i] - ID_EX_register.rs2_vval[i];
+        for(int i=0;i<std::min(ID_EX_register.rs1_vval.size(),ID_EX_register.rs2_vval.size());i++){
+        ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] - ID_EX_register.rs2_vval[i]);
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
@@ -454,9 +458,11 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
 
      }
      else if (opcode=="vlw") {
-       
+       if(ID_EX_register.imm!=-1)
+       {
         ID_EX_register.address =ID_EX_register.rs1_val + ID_EX_register.imm;
-
+       }
+        
     }
     
     
@@ -520,11 +526,13 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
 
 
 void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
+   // std::cout<<"Enter3e";
 
         std::string opcode = EX_MEM_register.opcode;
         // Check if the instruction is a load (lw) or store (sw)
         if (opcode == "lw") {
             // Perform memory read operation for load instruction
+            
             bool isHit=cache.prefetch( EX_MEM_register.address);
             if(isHit==false)
             {
@@ -541,21 +549,43 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
         
         }
         else if (opcode == "vlw") {
+            std::pair<int, int>vectorValue;
+            int vectorLength=4;
             // Perform memory read operation for load instruction
            std:: vector<int> data;
-           for(int i=0;i<4;i++){
-          data[i]   = memory[EX_MEM_register.address+i]; // Access memory
-            MEM_WB_register =EX_MEM_register; // Move instruction to the next pipeline register
-            MEM_WB_register.rd_vval[i] = data[i]; // Update instruction's destination register value
+           if (EX_MEM_register.imm == -1) {
+            // Check if the vector name exists in vectorInfo
+            std::string vectorName = EX_MEM_register.rs1; // Assuming rs1 contains the vector name
+            if (vectorInfo.find(vectorName) != vectorInfo.end()) {
+                // Vector name found in vectorInfo, retrieve its value
+                vectorValue = vectorInfo[vectorName];
+                EX_MEM_register.address = vectorValue.first;
+            }
+          
+            }
+            vectorLength = vectorValue.second/4;
+            //  std::cout<<vectorLength;
+            //  std::cout<<EX_MEM_register.address;
+       // EX_MEM_register.rd_vval.pop_back();
+           for(int i=0;i<vectorLength;i++){
+            data.push_back (memory[EX_MEM_register.address+i*4]); // Access memory
+            EX_MEM_register.rd_vval.push_back( data[i]); // Update instruction's destination register value
            }
+    
+           for(int i=0;i<EX_MEM_register.rd_vval.size();i++)
+           {
+            std::cout<<EX_MEM_register.rd_vval[i]<<" ";
+           }
+           
+           MEM_WB_register =EX_MEM_register;
         } 
         
         else if (opcode == "vsw") {//we have assumed cpu doesnt wait until entire write is complemeted,(waits only till written in some intermediate buffer)
             // Perform memory write operation for store instruction
-            for(int i=0;i<4;i++){
-            memory[EX_MEM_register.address+i] = EX_MEM_register.rs2_vval[i]; // Write data to memory
-            MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
+            for(int i=0;i<EX_MEM_register.rs2_vval.size();i++){
+            memory[EX_MEM_register.address+i*4] = EX_MEM_register.rs2_vval[i]; // Write data to memory
             }
+             MEM_WB_register = EX_MEM_register;// Move instruction to the next pipeline register
         }
          else {
             // For other instructions, simply pass them to the next pipeline stage
@@ -571,11 +601,26 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
          
         if (!MEM_WB_register.rd.empty()) {
             // Write back the result to the destination register
-             std::cout<<MEM_WB_register.rd<<" "<<" VAL IS "<<MEM_WB_register.rd_val<<std::endl;
+             
+            
+            if(MEM_WB_register.opcode=="vadd"||MEM_WB_register.opcode=="vsub"||MEM_WB_register.opcode=="vaddi"||MEM_WB_register.opcode=="vmul"||MEM_WB_register.opcode=="vmuli"|| MEM_WB_register.opcode=="vlw"||MEM_WB_register.opcode=="vsw")
+            {
+                 std::cout<<MEM_WB_register.rd<<" "<<" VAL IS ";
+                for(int i=0;i<MEM_WB_register.rd_vval.size();i++){
+                    std::cout<<MEM_WB_register.rd_vval[i]<<" ";
+                }
+                 copy(MEM_WB_register.rd_vval.begin(),MEM_WB_register.rd_vval.end(), back_inserter(vregisters[MEM_WB_register.rd]));  
+            }
+             
+            else{
+            std::cout<<MEM_WB_register.rd<<" "<<" VAL IS "<<MEM_WB_register.rd_val<<std::endl;
+            {
             registers[MEM_WB_register.rd] = MEM_WB_register.rd_val; // Update the value of the destination register
+            }
             numInst++;
              for (const auto& entry : getRegisters()) {
                 std::cout << entry.first << ": " << entry.second<<std::endl;
+             }
         }  
         
             // Mark the destination register as ready
@@ -586,10 +631,11 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
 }
 
 
-void Core:: setProgram(std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProg)
+void Core:: setProgram(std::tuple<std::vector<std::vector<std::string>>, std::map<std::string, int>,std::map<std::string,std::pair<int,int>>> parsedProg)
 {
-    program=parsedProg.first;
-    labels=parsedProg.second;
+    program=std::get<0>(parsedProg);
+    labels=std::get<1>(parsedProg);
+    vectorInfo=std::get<2>(parsedProg);
     std::cout<<"PROG SIZE IS"<<program.size();
 
 }
@@ -615,6 +661,9 @@ const std::unordered_map<std::string, int>& Core::getRegisters() const {
     // Implementation of getRegisters function
      return registers;
 }
+const std::unordered_map<std::string, std::vector<int>>& Core::getVectorRegisters()const {
+    return vregisters;}
+    
 
 void Core::reset() {
     // Implementation of reset function
@@ -628,8 +677,8 @@ void Core::reset() {
     {"x31", 0}
         };
        vregisters={
-    {"v0", {0,0,0,0}}, {"v1", {0,0,0,0}}, {"v2", {0,0,0,0}}, {"v3", {0,0,0,0}},
-    {"v4", {0,0,0,0}}, {"v5", {0,0,0,0}}, {"v6", {0,0,0,0}}, {"v7", {0,0,0,0}}
+    {"v0", {0}}, {"v1", {}}, {"v2", {}}, {"v3", {}},
+    {"v4", {}}, {"v5", {}}, {"v6", {}}, {"v7", {}}
 };
 
         std::cout << "Reset processor" << std::endl;
@@ -652,6 +701,8 @@ public:
     int getMemory(int wordAddress);
     const std::vector<int>& getMemoryContents() const;
     const std::unordered_map<std::string, int>& getCoreRegisters(int coreIndex) const;
+    const std::unordered_map<std::string, std::vector<int>>& getCoreVectorRegisters(int coreIndex) const;
+
 };
 Processor::Processor() : memory(4096, 0), clock(0), cores(2),cache() {}
 void Processor::setCache(int cache_size,int block_size,int set_ass,int rep_policy,int memacess)
@@ -711,7 +762,16 @@ const std::unordered_map<std::string, int>& Processor::getCoreRegisters(int core
             return emptyMap;
         }
 }
-
+const std::unordered_map<std::string, std::vector<int>>& Processor::getCoreVectorRegisters(int coreIndex) const {
+    // Implementation of getVectorRegisters function
+    if (coreIndex >= 0 && coreIndex < cores.size()) {
+        return cores[coreIndex].getVectorRegisters();
+    } else {
+        std::cerr << "Invalid core index." << std::endl;
+        static std::unordered_map<std::string, std::vector<int>> emptyMap;
+        return emptyMap;
+    }
+}
   
 class Parser {
 private:
@@ -727,16 +787,16 @@ public:
     {
         index=a;
     }
-
-    std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parseFromFile(const std::string& filePath,std::vector<int>& memory) {
+    std::tuple<std::vector<std::vector<std::string>>, std::map<std::string, int>, std::map<std::string, std::pair<int, int>>> parseFromFile(const std::string& filePath,std::vector<int>& memory) {
         std::ifstream file(filePath);
         if (!file.is_open()) {
             std::cerr << "Error opening file: " << filePath << std::endl;
-            return {{}, {}};
+            return {{}, {},{}};
         }
 
         std::vector<std::vector<std::string>> lineWiseSplit;
         std::map<std::string, int> labels;
+        std::map<std::string, std::pair<int, int>> vectorInfo;
         std::string line;
         // int index =0; // Starting memory index
 
@@ -777,8 +837,25 @@ public:
                     memory[index] = value;
                 }
             }
+            else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".vec") {
+                std::string vecName = lineWiseSplit[i][1]; // Extract the vector name
+                vecName.pop_back(); // Remove the colon at the end
+                int currentAddress = index; // Starting memory index
+                for (size_t j = 2; j < lineWiseSplit[i].size(); ++j, index += 4) {
+                
+                    int value = std::stoi(lineWiseSplit[i][j]);
+                    memory[index] = value;
+    
+                //  catch (const std::invalid_argument& e) {
+                //  std::cerr << "Invalid argument: " << lineWiseSplit[i][j] << std::endl;
+                //   }
+}
+
+                int endAddress = index - 4; // Ending address
+                vectorInfo[vecName] ={currentAddress,endAddress - currentAddress+4} ; // Store current addresses and length
+}
         }
-        std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int>> parsedProgram = std::make_pair(lineWiseSplit, labels);
+        std::tuple<std::vector<std::vector<std::string>>, std::map<std::string, int>, std::map<std::string, std::pair<int, int>>> parsedProgram = std::make_tuple(lineWiseSplit, labels,vectorInfo);
         int a=(int)lineWiseSplit.size();
         for(int i=0;i<a;i++)
         {

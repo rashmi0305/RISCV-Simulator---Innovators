@@ -23,7 +23,7 @@ public:
     std::vector<int> rd_vval={0};
     std::vector<int> rs1_vval={0};
     std::vector<int> rs2_vval={0};
-    int imm=0;
+    int imm=-1;
     int latency=1;
     int address=0;
     bool rd_ready=false;
@@ -50,7 +50,7 @@ public:
         rd_vval = {0};
         rs1_vval = {0};
         rs2_vval = {0};
-        imm = 0;
+        imm = -1;
         address = 0;
         rd_ready = false;
         branch_target = 0;
