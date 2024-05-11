@@ -41,6 +41,9 @@ To build and run the program, follow these steps:
 ## Minutes of Meetings:
 #### Date: 9-may-2024
     Members:Rashmitha,Sahiti
+    Minutes:1.Updated SIMD to support vector instructions using vector registers in instruction class.
+#### Date: 9-may-2024
+    Members:Rashmitha,Sahiti
     Minutes:1.Decided to integrate simd unit into the processor itself.
             2.Decided on using special vector registers and instructions-vadd vaddi vmul vmuli vlw vsw 
 #### Date: 8-may-2024
