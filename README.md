@@ -39,7 +39,10 @@ To build and run the program, follow these steps:
 ---
 
 ## Minutes of Meetings:
-#### Date: 9-may-2024
+#### Date: 11-may-2024
+    Members:Rashmitha,Sahiti
+    Minutes:1.Updated SIMD to support vector instructions in parsing and other parts of processor.
+    #### Date: 10-may-2024
     Members:Rashmitha,Sahiti
     Minutes:1.Updated SIMD to support vector instructions using vector registers in instruction class.
 #### Date: 9-may-2024
