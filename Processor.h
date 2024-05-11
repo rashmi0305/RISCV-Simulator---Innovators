@@ -16,7 +16,7 @@
 #include "Instruction.h"
 #include "Cache.h"
 
-bool predictBranch()//for now here,later may be into anothr class
+bool predictBranch()//for now just static prediction
     {
         return false;
     }
@@ -121,30 +121,21 @@ void Core::execute(std::vector<int> &memory,CacheSimulator &cache) {
     }
     std::cout << "Done." << std::endl;
 }
-// unsigned int binary_to_uint(std:: string b)
-// {
-    
-// }
+
 void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
     std::cout<<"stalcount is"<<stallCount<<std::endl;
     if (pc < program.size() && stall==0) {
         while(true){
         if (program[pc][0] == "#" || program[pc][0].find(".") != std::string::npos) {
                 pc = pc + 1;
-                // numInst++;
-                // cycles++;
    
         }
         else if (program[pc][0].find(":") != std::string::npos && program[pc].size() == 1) {
             pc = pc + 1;
-            // numInst++;
-            // cycles++;
-
         }
         else{
            
-            int n = pc*4+3000;
-            // std::string add = std::bitset<32>(n).to_string();
+            int n = pc*4+3000;//to identify instruction by a number i.e pc which is stored in memory
             bool isHit=cache.prefetch(n);
             if(isHit!=true)
             {
@@ -152,7 +143,7 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
                 cycles+=memacess;//main mem access time-change to dynamic later change to add miss time
             }
             else {
-                //add hit time here?(for latency) assumed to be 1 for now
+                //can add hit time here(for latency) assumed to be 1 for now
             }
             break;
          }
@@ -181,7 +172,7 @@ void Core::pipelineFetch(std::vector<int>&memory,CacheSimulator &cache) {
     std::cout<<"print if/id";
     this->IF_ID_register.printInst();
 }
-bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)
+bool Core::checkDependency(Instruction curr,Instruction prev,Instruction pprev)//this function checks the data dependency between current,prev and pprev instructions and accordingly increments the stall
 {   //if(!dataforwarding){
     if(stall==0 )
     {
@@ -239,7 +230,6 @@ void Core::pipelineDecode() {
     {
         stall--;
     }
-   // if (!IF_ID_register.empty()) {
     if(stall==0){
     bool flag=checkDependency(IF_ID_register,EX_MEM_register,MEM_WB_register);
     if(stall!=0 && stall1)
@@ -250,6 +240,7 @@ void Core::pipelineDecode() {
     {
     
     ID_EX_register = IF_ID_register;
+    //Register fetch for all possible instructions
     if(ID_EX_register.opcode=="add"||ID_EX_register.opcode=="sub")
     {
         ID_EX_register.rd_val=getRegister(ID_EX_register.rd);
@@ -275,7 +266,7 @@ void Core::pipelineDecode() {
     
     else if (ID_EX_register.opcode == "sw") 
     {
-        //sw rs2, imm(rs1)
+        //sw rs2, imm(rs1) format
         ID_EX_register.rs2_val = getRegister(ID_EX_register.rs2);
         ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
     }
@@ -286,8 +277,7 @@ void Core::pipelineDecode() {
     ID_EX_register.rs1_val = getRegister(ID_EX_register.rs1);
     }
     else if (ID_EX_register.opcode == "vlw")
-    {
-    // Parse the instruction and extract rd, imm, and rs1
+    {//has two possible formats: vlw rd,vec_name which is rs1 i.e without imm and vlw rd, imm( rs1)
     ID_EX_register.rd_vval = getvregisters(ID_EX_register.rd);
     if(ID_EX_register.imm!=-1)
     {
@@ -311,7 +301,7 @@ void Core::pipelineDecode() {
         // Extract the immediate value and sign-extend it
         //ID_EX_register.imm = signExtend(ID_EX_register.imm);
     }
-    else if (ID_EX_register.opcode == "li")//HERE OR EXECUTE ?
+    else if (ID_EX_register.opcode == "li")
     {
         // Parse the instruction and extract rd and imm
         ID_EX_register.rd_val = ID_EX_register.imm;
@@ -359,7 +349,7 @@ else{
 
 }
 
-void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency here
+void Core::pipelineExecute(std::vector<int> &memory) {
     if(stall1){ 
         EX_MEM_register=Instruction();
     }
@@ -377,14 +367,14 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-    if (opcode == "vmuli") {
+    if (opcode == "vmuli") {//multiply vector by given scalar
         for(int i=0;i<ID_EX_register.rs1_vval.size();i++){
         ID_EX_register.rd_vval.push_back(ID_EX_register.rs1_vval[i] * ID_EX_register.imm);
         }
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     }
-    if (opcode == "vaddi") {
+    if (opcode == "vaddi") {//add vector by given scalar
         for(int i=0;i<ID_EX_register.rs1_vval.size();i++){
         ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] + ID_EX_register.imm);
         }
@@ -396,7 +386,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-    else  if (opcode == "vadd") {
+    else  if (opcode == "vadd") {//add twoi vectors,if of different size then the bigger vector's remaining elements are retained next
         int i;
         for( i=0;i<std::min(ID_EX_register.rs1_vval.size(),ID_EX_register.rs2_vval.size());i++){
         ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] + ID_EX_register.rs2_vval[i]);
@@ -415,7 +405,7 @@ void Core::pipelineExecute(std::vector<int> &memory) {//write logic for latency 
         // Update the EX_MEM_register
        // EX_MEM_register = {ID_EX_register.rd, ID_EX_register.rd_val};
     } 
-      if (opcode == "vmul") {
+      if (opcode == "vmul") {//multiply elemenst of two vectors(only till same size)
         for(int i=0;i<std::min(ID_EX_register.rs1_vval.size(),ID_EX_register.rs2_vval.size());i++){
         ID_EX_register.rd_vval.push_back( ID_EX_register.rs1_vval[i] * ID_EX_register.rs2_vval[i]);
         }
@@ -564,9 +554,7 @@ void Core::pipelineMemory(std::vector<int> &memory, CacheSimulator &cache) {
           
             }
             vectorLength = vectorValue.second/4;
-            //  std::cout<<vectorLength;
-            //  std::cout<<EX_MEM_register.address;
-       // EX_MEM_register.rd_vval.pop_back();
+          
            for(int i=0;i<vectorLength;i++){
             data.push_back (memory[EX_MEM_register.address+i*4]); // Access memory
             EX_MEM_register.rd_vval.push_back( data[i]); // Update instruction's destination register value
@@ -837,6 +825,7 @@ public:
                     memory[index] = value;
                 }
             }
+            //for vectors-store the vecName along with starting address and length in a map.
             else if (lineWiseSplit[i].size() > 0 && lineWiseSplit[i][0] == ".vec") {
                 std::string vecName = lineWiseSplit[i][1]; // Extract the vector name
                 vecName.pop_back(); // Remove the colon at the end
@@ -846,10 +835,7 @@ public:
                     int value = std::stoi(lineWiseSplit[i][j]);
                     memory[index] = value;
     
-                //  catch (const std::invalid_argument& e) {
-                //  std::cerr << "Invalid argument: " << lineWiseSplit[i][j] << std::endl;
-                //   }
-}
+                }
 
                 int endAddress = index - 4; // Ending address
                 vectorInfo[vecName] ={currentAddress,endAddress - currentAddress+4} ; // Store current addresses and length
